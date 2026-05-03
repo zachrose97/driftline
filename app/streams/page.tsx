@@ -1,8 +1,17 @@
 import StreamsClient from './StreamsClient';
 
-export default async function StreamsPage() {
+const VALID_STATES = ['ny','pa','vt','me','nh','ma','ct','va','wv','nc','co','mt','id','wy','wa','or','ca'];
+
+export default async function StreamsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ state?: string }>
+}) {
+  const { state: rawState } = await searchParams;
+  const state = VALID_STATES.includes(rawState?.toLowerCase() ?? '') ? rawState!.toLowerCase() : 'ny';
+
   const res = await fetch(
-    'https://waterservices.usgs.gov/nwis/iv/?format=json&stateCd=ny&parameterCd=00060,00010&siteStatus=active',
+    `https://waterservices.usgs.gov/nwis/iv/?format=json&stateCd=${state}&parameterCd=00060,00010&siteStatus=active`,
     { cache: 'no-store' }
   );
   const data = await res.json();
@@ -24,5 +33,5 @@ export default async function StreamsPage() {
 
   const rivers = Object.values(siteMap).filter((r: any) => r.flow !== null);
 
-  return <StreamsClient rivers={rivers} />;
+  return <StreamsClient rivers={rivers} currentState={state} />;
 }

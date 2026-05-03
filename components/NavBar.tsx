@@ -54,11 +54,12 @@ export default function NavBar() {
       </Link>
 
       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <Link href="/streams" style={linkStyle('/streams')}>Stream Conditions</Link>
-        <Link href="/reports" style={linkStyle('/reports')}>Guide Reports</Link>
+        <Link href="/streams" style={linkStyle('/streams')}>Conditions</Link>
         <Link href="/hatches" style={linkStyle('/hatches')}>Hatches</Link>
+        <Link href="/reports" style={linkStyle('/reports')}>Reports</Link>
         <Link href="/stocking" style={linkStyle('/stocking')}>Stocking</Link>
-        <Link href="/logbook" style={linkStyle('/logbook')}>My Logbook</Link>
+        <Link href="/map" style={linkStyle('/map')}>Map</Link>
+        <Link href="/logbook" style={linkStyle('/logbook')}>Logbook</Link>
 
         {userEmail ? (
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>

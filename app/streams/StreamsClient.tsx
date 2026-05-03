@@ -1,6 +1,27 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+const STATES: { code: string; label: string }[] = [
+  { code: 'ny', label: 'New York' },
+  { code: 'pa', label: 'Pennsylvania' },
+  { code: 'vt', label: 'Vermont' },
+  { code: 'me', label: 'Maine' },
+  { code: 'nh', label: 'New Hampshire' },
+  { code: 'ma', label: 'Massachusetts' },
+  { code: 'ct', label: 'Connecticut' },
+  { code: 'va', label: 'Virginia' },
+  { code: 'wv', label: 'West Virginia' },
+  { code: 'nc', label: 'North Carolina' },
+  { code: 'co', label: 'Colorado' },
+  { code: 'mt', label: 'Montana' },
+  { code: 'id', label: 'Idaho' },
+  { code: 'wy', label: 'Wyoming' },
+  { code: 'wa', label: 'Washington' },
+  { code: 'or', label: 'Oregon' },
+  { code: 'ca', label: 'California' },
+];
 
 function getCondition(flow: number) {
   if (flow > 1000) return { label: 'High', color: '#DC2626', bg: '#FEE2E2' };
@@ -17,10 +38,13 @@ function titleCase(str: string) {
   return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 }
 
-export default function StreamsClient({ rivers }: { rivers: any[] }) {
+export default function StreamsClient({ rivers, currentState }: { rivers: any[]; currentState: string }) {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('');
   const [conditionFilter, setConditionFilter] = useState('');
+
+  const stateName = STATES.find(s => s.code === currentState)?.label ?? currentState.toUpperCase();
 
   let filtered = rivers.filter(r =>
     r.name.toLowerCase().includes(search.toLowerCase())
@@ -43,11 +67,21 @@ export default function StreamsClient({ rivers }: { rivers: any[] }) {
             Stream Conditions
           </h1>
           <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>
-            Live USGS data · New York State · {rivers.length} rivers with flow data
+            Live USGS data · {stateName} · {rivers.length} rivers with flow data
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          <select
+            value={currentState}
+            onChange={e => router.push(`/streams?state=${e.target.value}`)}
+            style={{ padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '0.9rem', background: '#fff', cursor: 'pointer', color: '#111827', fontWeight: '500' }}
+          >
+            {STATES.map(s => (
+              <option key={s.code} value={s.code}>{s.label}</option>
+            ))}
+          </select>
+
           <input
             type="text"
             placeholder="Search rivers..."

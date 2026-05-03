@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Hatch } from './page';
+import type { Hatch } from '@/lib/hatches';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
