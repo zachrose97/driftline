@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
 const US_STATES = [
@@ -10,20 +11,29 @@ const US_STATES = [
   'VA','WA','WV','WI','WY',
 ];
 
-const emptyForm = {
-  shop_name: '',
-  website: '',
-  address: '',
-  state: '',
-  contact_email: '',
-  description: '',
-};
-
 export default function ApplyShopPage() {
-  const [form, setForm] = useState(emptyForm);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [form, setForm] = useState({
+    shop_name: '',
+    website: '',
+    address: '',
+    state: '',
+    contact_email: '',
+    description: '',
+  });
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const email = session?.user?.email ?? null;
+      setUserEmail(email);
+      if (email) setForm(f => ({ ...f, contact_email: email }));
+      setAuthChecked(true);
+    });
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,16 +45,6 @@ export default function ApplyShopPage() {
     setSubmitting(true);
     setError('');
 
-    // Inserts into a `shops` table. Create it in Supabase with:
-    // id uuid default gen_random_uuid() primary key,
-    // shop_name text not null,
-    // website text,
-    // address text,
-    // state text not null,
-    // contact_email text not null,
-    // description text,
-    // verified boolean default false,
-    // created_at timestamptz default now()
     const { error: dbError } = await supabase
       .from('shops')
       .insert({
@@ -67,12 +67,44 @@ export default function ApplyShopPage() {
     setSubmitting(false);
   }
 
+  if (!authChecked) {
+    return (
+      <main style={{ minHeight: '100vh', background: '#f8faf9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#9CA3AF' }}>Loading...</p>
+      </main>
+    );
+  }
+
+  if (!userEmail) {
+    return (
+      <main style={{ minHeight: '100vh', background: '#f8faf9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+        <div style={{ textAlign: 'center', maxWidth: '420px' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎣</div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#085041', marginBottom: '0.75rem' }}>
+            Create an account to apply
+          </h1>
+          <p style={{ color: '#6B7280', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+            A free DriftLine account links your shop listing to your login so you can post daily conditions reports.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+            <Link href="/signup" style={{ background: '#085041', color: '#fff', padding: '0.7rem 1.5rem', borderRadius: '8px', textDecoration: 'none', fontWeight: '600', fontSize: '0.9rem' }}>
+              Sign up free
+            </Link>
+            <Link href="/login" style={{ background: 'transparent', color: '#085041', padding: '0.7rem 1.5rem', borderRadius: '8px', textDecoration: 'none', fontWeight: '600', fontSize: '0.9rem', border: '1px solid #085041' }}>
+              Log in
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   if (success) {
     return (
       <main style={{ minHeight: '100vh', background: '#f8faf9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
         <div style={{ maxWidth: '480px', textAlign: 'center' }}>
           <div style={{ background: '#DCFCE7', border: '1px solid #6EE7B7', borderRadius: '12px', padding: '2.5rem 2rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎣</div>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
             <h2 style={{ fontSize: '1.4rem', fontWeight: '700', color: '#166534', marginBottom: '0.75rem' }}>
               Application received!
             </h2>

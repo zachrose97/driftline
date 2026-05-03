@@ -32,7 +32,7 @@ export default function ReportsClient({ reports }: { reports: any[] }) {
         const { data } = await supabase
           .from('shops')
           .select('*')
-          .eq('email', email)
+          .eq('contact_email', email)
           .eq('verified', true)
           .single();
         if (data) {
