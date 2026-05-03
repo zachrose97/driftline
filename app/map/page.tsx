@@ -10,14 +10,23 @@ export type RiverPoint = {
   updated: string | null;
 };
 
-export default async function MapPage() {
+const VALID_STATES = ['ny','pa','vt','me','nh','ma','ct','va','wv','nc','co','mt','id','wy','wa','or','ca'];
+
+export default async function MapPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ state?: string }>
+}) {
+  const { state: rawState } = await searchParams;
+  const state = VALID_STATES.includes(rawState?.toLowerCase() ?? '') ? rawState!.toLowerCase() : 'ny';
+
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? '';
 
   let rivers: RiverPoint[] = [];
 
   try {
     const res = await fetch(
-      'https://waterservices.usgs.gov/nwis/iv/?format=json&stateCd=ny&parameterCd=00060,00010&siteStatus=active',
+      `https://waterservices.usgs.gov/nwis/iv/?format=json&stateCd=${state}&parameterCd=00060,00010&siteStatus=active`,
       { cache: 'no-store' },
     );
     const data = await res.json();
@@ -63,5 +72,5 @@ export default async function MapPage() {
     // USGS unavailable — map renders with no points
   }
 
-  return <MapClient rivers={rivers} token={token} />;
+  return <MapClient rivers={rivers} token={token} currentState={state} />;
 }

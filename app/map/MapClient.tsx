@@ -1,8 +1,29 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { RiverPoint } from './page';
+
+const STATES: { code: string; label: string; center: [number, number]; zoom: number }[] = [
+  { code: 'ny', label: 'New York',       center: [-75.4,  42.9], zoom: 7 },
+  { code: 'pa', label: 'Pennsylvania',   center: [-77.2,  41.2], zoom: 7 },
+  { code: 'vt', label: 'Vermont',        center: [-72.6,  44.0], zoom: 7 },
+  { code: 'me', label: 'Maine',          center: [-69.2,  45.2], zoom: 6 },
+  { code: 'nh', label: 'New Hampshire',  center: [-71.5,  43.9], zoom: 7 },
+  { code: 'ma', label: 'Massachusetts',  center: [-71.8,  42.3], zoom: 8 },
+  { code: 'ct', label: 'Connecticut',    center: [-72.7,  41.6], zoom: 8 },
+  { code: 'va', label: 'Virginia',       center: [-79.5,  37.8], zoom: 7 },
+  { code: 'wv', label: 'West Virginia',  center: [-80.4,  38.9], zoom: 7 },
+  { code: 'nc', label: 'North Carolina', center: [-79.0,  35.6], zoom: 6 },
+  { code: 'co', label: 'Colorado',       center: [-105.5, 39.1], zoom: 7 },
+  { code: 'mt', label: 'Montana',        center: [-110.0, 47.0], zoom: 6 },
+  { code: 'id', label: 'Idaho',          center: [-114.5, 44.5], zoom: 6 },
+  { code: 'wy', label: 'Wyoming',        center: [-107.5, 43.0], zoom: 6 },
+  { code: 'wa', label: 'Washington',     center: [-120.5, 47.5], zoom: 7 },
+  { code: 'or', label: 'Oregon',         center: [-120.5, 44.0], zoom: 7 },
+  { code: 'ca', label: 'California',     center: [-119.5, 37.5], zoom: 6 },
+];
 
 function getCondition(flow: number): { label: string; color: string } {
   if (flow > 1000) return { label: 'High', color: '#DC2626' };
@@ -51,12 +72,15 @@ const LEGEND = [
   { label: 'Low (<50 cfs)',       color: '#9CA3AF' },
 ];
 
-export default function MapClient({ rivers, token }: { rivers: RiverPoint[]; token: string }) {
+export default function MapClient({ rivers, token, currentState }: { rivers: RiverPoint[]; token: string; currentState: string }) {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const [loaded, setLoaded] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const stateConfig = STATES.find(s => s.code === currentState) ?? STATES[0];
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current || !token) return;
@@ -69,8 +93,8 @@ export default function MapClient({ rivers, token }: { rivers: RiverPoint[]; tok
       map = new mapboxgl.Map({
         container: containerRef.current!,
         style: 'mapbox://styles/mapbox/outdoors-v12',
-        center: [-75.4, 42.9],
-        zoom: 7,
+        center: stateConfig.center,
+        zoom: stateConfig.zoom,
         attributionControl: false,
       });
 
@@ -105,7 +129,6 @@ export default function MapClient({ rivers, token }: { rivers: RiverPoint[]; tok
           clusterRadius: 40,
         });
 
-        // Clustered circles
         map.addLayer({
           id: 'clusters',
           type: 'circle',
@@ -133,7 +156,6 @@ export default function MapClient({ rivers, token }: { rivers: RiverPoint[]; tok
           paint: { 'text-color': '#ffffff' },
         });
 
-        // Individual gauge points
         map.addLayer({
           id: 'gauge-points',
           type: 'circle',
@@ -154,34 +176,22 @@ export default function MapClient({ rivers, token }: { rivers: RiverPoint[]; tok
           },
         });
 
-        // Cursor on hover
-        map.on('mouseenter', 'gauge-points', () => {
-          map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', 'gauge-points', () => {
-          map.getCanvas().style.cursor = '';
-        });
-        map.on('mouseenter', 'clusters', () => {
-          map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', 'clusters', () => {
-          map.getCanvas().style.cursor = '';
-        });
+        map.on('mouseenter', 'gauge-points', () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', 'gauge-points', () => { map.getCanvas().style.cursor = ''; });
+        map.on('mouseenter', 'clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', 'clusters', () => { map.getCanvas().style.cursor = ''; });
 
-        // Click individual point — show popup
         map.on('click', 'gauge-points', (e: any) => {
           const feat = e.features?.[0];
           if (!feat) return;
           const { name, flow, temp, updated } = feat.properties;
           const [lng, lat] = (feat.geometry as any).coordinates;
-
           new mapboxgl.Popup({ closeButton: true, maxWidth: '300px', offset: 12 })
             .setLngLat([lng, lat])
             .setHTML(buildPopupHTML(name, flow, temp, updated))
             .addTo(map);
         });
 
-        // Click cluster — zoom in
         map.on('click', 'clusters', (e: any) => {
           const feat = e.features?.[0];
           if (!feat) return;
@@ -200,9 +210,8 @@ export default function MapClient({ rivers, token }: { rivers: RiverPoint[]; tok
       map?.remove();
       mapRef.current = null;
     };
-  }, [token]);
+  }, [token, currentState]);
 
-  // Fly to a river when clicked from the sidebar
   function flyTo(river: RiverPoint) {
     if (!mapRef.current) return;
     setSelectedId(river.id);
@@ -247,9 +256,25 @@ export default function MapClient({ rivers, token }: { rivers: RiverPoint[]; tok
         overflow: 'hidden',
       }}>
         <div style={{ padding: '1rem', borderBottom: '1px solid #E5E7EB' }}>
-          <h1 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#085041', marginBottom: '2px' }}>River Map</h1>
+          <h1 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#085041', marginBottom: '0.5rem' }}>River Map</h1>
+
+          {/* State selector */}
+          <select
+            value={currentState}
+            onChange={e => {
+              setSearch('');
+              setSelectedId(null);
+              router.push(`/map?state=${e.target.value}`);
+            }}
+            style={{ width: '100%', padding: '0.45rem 0.75rem', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '0.85rem', color: '#111827', background: '#fff', cursor: 'pointer', marginBottom: '0.5rem', boxSizing: 'border-box' }}
+          >
+            {STATES.map(s => (
+              <option key={s.code} value={s.code}>{s.label}</option>
+            ))}
+          </select>
+
           <p style={{ fontSize: '0.78rem', color: '#9CA3AF', marginBottom: '0.75rem' }}>
-            {rivers.length} USGS gauges · NY State
+            {rivers.length} USGS gauges · {stateConfig.label}
           </p>
           <input
             type="text"
