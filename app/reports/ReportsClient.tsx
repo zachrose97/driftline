@@ -84,7 +84,7 @@ export default function ReportsClient({ reports }: { reports: any[] }) {
     if (!userEmail) {
       return (
         <Link
-          href="/login"
+          href="/login?redirect=/reports"
           style={{ background: '#085041', color: '#fff', padding: '0.7rem 1.5rem', borderRadius: '8px', textDecoration: 'none', fontWeight: '600', fontSize: '0.9rem' }}
         >
           Log in to post

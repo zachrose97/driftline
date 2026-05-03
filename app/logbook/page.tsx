@@ -178,7 +178,7 @@ export default function LogbookPage() {
             Log in to record your catches, track your stats, and build a lifetime fishing history — free forever.
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-            <Link href="/login" style={{ background: '#085041', color: '#fff', padding: '0.7rem 1.5rem', borderRadius: '8px', textDecoration: 'none', fontWeight: '600', fontSize: '0.9rem' }}>
+            <Link href="/login?redirect=/logbook" style={{ background: '#085041', color: '#fff', padding: '0.7rem 1.5rem', borderRadius: '8px', textDecoration: 'none', fontWeight: '600', fontSize: '0.9rem' }}>
               Log in
             </Link>
             <Link href="/signup" style={{ background: 'transparent', color: '#085041', padding: '0.7rem 1.5rem', borderRadius: '8px', textDecoration: 'none', fontWeight: '600', fontSize: '0.9rem', border: '1px solid #085041' }}>

@@ -90,7 +90,7 @@ export default function ApplyShopPage() {
             <Link href="/signup" style={{ background: '#085041', color: '#fff', padding: '0.7rem 1.5rem', borderRadius: '8px', textDecoration: 'none', fontWeight: '600', fontSize: '0.9rem' }}>
               Sign up free
             </Link>
-            <Link href="/login" style={{ background: 'transparent', color: '#085041', padding: '0.7rem 1.5rem', borderRadius: '8px', textDecoration: 'none', fontWeight: '600', fontSize: '0.9rem', border: '1px solid #085041' }}>
+            <Link href="/login?redirect=/apply-shop" style={{ background: 'transparent', color: '#085041', padding: '0.7rem 1.5rem', borderRadius: '8px', textDecoration: 'none', fontWeight: '600', fontSize: '0.9rem', border: '1px solid #085041' }}>
               Log in
             </Link>
           </div>
