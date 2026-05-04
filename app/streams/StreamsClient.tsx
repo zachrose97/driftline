@@ -38,7 +38,7 @@ function titleCase(str: string) {
   return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 }
 
-export default function StreamsClient({ rivers, currentState }: { rivers: any[]; currentState: string }) {
+export default function StreamsClient({ rivers, currentState, usgsDown }: { rivers: any[]; currentState: string; usgsDown?: boolean }) {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('');
@@ -111,6 +111,12 @@ export default function StreamsClient({ rivers, currentState }: { rivers: any[];
             <option value="Low">Low</option>
           </select>
         </div>
+
+        {usgsDown && (
+          <div style={{ background: '#FEF3C7', border: '1px solid #D97706', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', color: '#92400E', fontSize: '0.875rem' }}>
+            USGS data is temporarily unavailable. Try refreshing in a few minutes.
+          </div>
+        )}
 
         <p style={{ fontSize: '0.85rem', color: '#9CA3AF', marginBottom: '1rem' }}>
           Showing {filtered.length} of {rivers.length} rivers
