@@ -48,7 +48,7 @@ export default async function MapPage({
   try {
     const res = await fetch(
       `https://waterservices.usgs.gov/nwis/iv/?format=json&stateCd=${state}&parameterCd=00060,00010&siteStatus=active`,
-      { cache: 'no-store' },
+      { cache: 'no-store', signal: AbortSignal.timeout(15000) },
     );
     const data = await res.json();
     const sites = data.value.timeSeries;
