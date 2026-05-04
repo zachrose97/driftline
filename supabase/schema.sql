@@ -18,11 +18,13 @@ create table if not exists shops (
 
 alter table shops enable row level security;
 
-create policy if not exists "shops: public read"
+drop policy if exists "shops: public read" on shops;
+create policy "shops: public read"
   on shops for select
   using (true);
 
-create policy if not exists "shops: auth insert"
+drop policy if exists "shops: auth insert" on shops;
+create policy "shops: auth insert"
   on shops for insert
   with check (auth.role() = 'authenticated');
 
@@ -46,11 +48,13 @@ alter table shop_reports enable row level security;
 alter table shop_reports
   add column if not exists verified_shop boolean not null default false;
 
-create policy if not exists "shop_reports: public read"
+drop policy if exists "shop_reports: public read" on shop_reports;
+create policy "shop_reports: public read"
   on shop_reports for select
   using (true);
 
-create policy if not exists "shop_reports: auth insert"
+drop policy if exists "shop_reports: auth insert" on shop_reports;
+create policy "shop_reports: auth insert"
   on shop_reports for insert
   with check (auth.role() = 'authenticated');
 
@@ -68,11 +72,18 @@ create table if not exists stocking_reports (
 
 alter table stocking_reports enable row level security;
 
-alter table stocking_reports
-  add constraint if not exists stocking_unique
-  unique (river_name, stocked_date, species, state);
+do $$ begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'stocking_unique'
+  ) then
+    alter table stocking_reports
+      add constraint stocking_unique
+      unique (river_name, stocked_date, species, state);
+  end if;
+end $$;
 
-create policy if not exists "stocking_reports: public read"
+drop policy if exists "stocking_reports: public read" on stocking_reports;
+create policy "stocking_reports: public read"
   on stocking_reports for select
   using (true);
 
@@ -96,32 +107,36 @@ create table if not exists catches (
 
 alter table catches enable row level security;
 
-create policy if not exists "catches: owner read"
+drop policy if exists "catches: owner read" on catches;
+create policy "catches: owner read"
   on catches for select
   using (auth.uid() = user_id);
 
-create policy if not exists "catches: owner insert"
+drop policy if exists "catches: owner insert" on catches;
+create policy "catches: owner insert"
   on catches for insert
   with check (auth.uid() = user_id);
 
-create policy if not exists "catches: owner delete"
+drop policy if exists "catches: owner delete" on catches;
+create policy "catches: owner delete"
   on catches for delete
   using (auth.uid() = user_id);
 
 
 -- ── Supabase Storage ─────────────────────────────────────────
--- Creates the catch-photos bucket (safe to re-run)
 insert into storage.buckets (id, name, public)
 values ('catch-photos', 'catch-photos', true)
 on conflict (id) do nothing;
 
-create policy if not exists "catch-photos: auth upload"
+drop policy if exists "catch-photos: auth upload" on storage.objects;
+create policy "catch-photos: auth upload"
   on storage.objects for insert
   with check (
     bucket_id = 'catch-photos'
     and auth.role() = 'authenticated'
   );
 
-create policy if not exists "catch-photos: public read"
+drop policy if exists "catch-photos: public read" on storage.objects;
+create policy "catch-photos: public read"
   on storage.objects for select
   using (bucket_id = 'catch-photos');
