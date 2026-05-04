@@ -1,6 +1,27 @@
+import type { Metadata } from 'next';
 import StreamsClient from './StreamsClient';
 
 const VALID_STATES = ['ny','pa','vt','me','nh','ma','ct','va','wv','nc','co','mt','id','wy','wa','or','ca'];
+
+const STATE_NAMES: Record<string, string> = {
+  ny:'New York', pa:'Pennsylvania', vt:'Vermont', me:'Maine', nh:'New Hampshire',
+  ma:'Massachusetts', ct:'Connecticut', va:'Virginia', wv:'West Virginia', nc:'North Carolina',
+  co:'Colorado', mt:'Montana', id:'Idaho', wy:'Wyoming', wa:'Washington', or:'Oregon', ca:'California',
+};
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ state?: string }>
+}): Promise<Metadata> {
+  const { state: rawState } = await searchParams;
+  const state = VALID_STATES.includes(rawState?.toLowerCase() ?? '') ? rawState!.toLowerCase() : 'ny';
+  const stateName = STATE_NAMES[state] ?? 'New York';
+  return {
+    title: `${stateName} Stream Conditions — DriftLine`,
+    description: `Live USGS flow and temperature data for ${stateName} rivers. Real-time stream conditions for fly fishing.`,
+  };
+}
 
 export default async function StreamsPage({
   searchParams,

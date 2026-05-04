@@ -1,6 +1,6 @@
 -- ============================================================
--- DriftLine — Supabase schema setup
--- Run these in order in the Supabase SQL editor
+-- DriftLine — complete Supabase schema
+-- Run this in the Supabase SQL editor (safe to re-run)
 -- ============================================================
 
 -- ── shops ────────────────────────────────────────────────────
@@ -18,77 +18,99 @@ create table if not exists shops (
 
 alter table shops enable row level security;
 
--- Anyone can read shops (needed for verified badge lookups)
-create policy "shops: public read"
+create policy if not exists "shops: public read"
   on shops for select
   using (true);
 
--- Authenticated users can insert their own application
-create policy "shops: auth insert"
+create policy if not exists "shops: auth insert"
   on shops for insert
   with check (auth.role() = 'authenticated');
 
--- Only service role (your admin) can update/delete
--- (manage verified status from Supabase dashboard or service key)
+
+-- ── shop_reports ─────────────────────────────────────────────
+create table if not exists shop_reports (
+  id             uuid default gen_random_uuid() primary key,
+  shop_name      text not null,
+  river_name     text not null,
+  report_text    text not null,
+  water_temp     numeric,
+  water_clarity  text,
+  flies_working  text[],
+  verified_shop  boolean not null default false,
+  created_at     timestamptz not null default now()
+);
+
+alter table shop_reports enable row level security;
+
+-- Add verified_shop column to existing tables (no-op if column already exists)
+alter table shop_reports
+  add column if not exists verified_shop boolean not null default false;
+
+create policy if not exists "shop_reports: public read"
+  on shop_reports for select
+  using (true);
+
+create policy if not exists "shop_reports: auth insert"
+  on shop_reports for insert
+  with check (auth.role() = 'authenticated');
 
 
 -- ── stocking_reports ─────────────────────────────────────────
--- Add unique constraint so the weekly import can upsert safely
+create table if not exists stocking_reports (
+  id           uuid default gen_random_uuid() primary key,
+  river_name   text not null,
+  state        text not null,
+  species      text not null,
+  quantity     integer,
+  stocked_date date not null,
+  created_at   timestamptz not null default now()
+);
+
+alter table stocking_reports enable row level security;
+
 alter table stocking_reports
   add constraint if not exists stocking_unique
   unique (river_name, stocked_date, species, state);
 
--- Allow public read
 create policy if not exists "stocking_reports: public read"
   on stocking_reports for select
   using (true);
 
--- Allow service role to upsert (used by /api/import-stocking)
--- Service key bypasses RLS automatically — no extra policy needed.
+-- Service role key bypasses RLS for cron imports — no insert policy needed.
 
 
 -- ── catches ──────────────────────────────────────────────────
+create table if not exists catches (
+  id             uuid default gen_random_uuid() primary key,
+  user_id        uuid not null references auth.users(id) on delete cascade,
+  species        text not null,
+  fly_used       text not null,
+  length_inches  numeric,
+  river_name     text not null,
+  notes          text,
+  lat            numeric,
+  lng            numeric,
+  photo_url      text,
+  caught_at      timestamptz not null default now()
+);
+
 alter table catches enable row level security;
 
--- Users can only see their own catches
 create policy if not exists "catches: owner read"
   on catches for select
   using (auth.uid() = user_id);
 
--- Users can only insert their own catches
 create policy if not exists "catches: owner insert"
   on catches for insert
   with check (auth.uid() = user_id);
 
--- Users can delete their own catches
 create policy if not exists "catches: owner delete"
   on catches for delete
   using (auth.uid() = user_id);
 
 
--- ── shop_reports ─────────────────────────────────────────────
--- Already has RLS — add a verified_shop column to track which
--- reports were posted by verified shops.
-alter table shop_reports
-  add column if not exists verified_shop boolean not null default false;
-
--- Public can read all reports
-create policy if not exists "shop_reports: public read"
-  on shop_reports for select
-  using (true);
-
--- Anyone can insert (UX-level verified check happens in the client)
--- For stricter enforcement, replace with an authenticated-only policy:
--- create policy "shop_reports: auth insert"
---   on shop_reports for insert
---   with check (auth.role() = 'authenticated');
-
-
 -- ── Supabase Storage ─────────────────────────────────────────
--- Create a "catch-photos" bucket in the Supabase dashboard:
---   Storage → New bucket → Name: catch-photos → Public: ON
---
--- Then run this to allow authenticated users to upload:
+-- Creates the catch-photos bucket (safe to re-run)
 insert into storage.buckets (id, name, public)
 values ('catch-photos', 'catch-photos', true)
 on conflict (id) do nothing;
