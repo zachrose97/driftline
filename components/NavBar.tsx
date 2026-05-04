@@ -63,7 +63,9 @@ export default function NavBar() {
 
         {userEmail ? (
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', color: '#6B7280' }}>{userEmail}</span>
+            <Link href="/account" style={{ fontSize: '0.8rem', color: '#6B7280', textDecoration: 'none' }}>
+              {userEmail}
+            </Link>
             <button
               onClick={handleLogout}
               style={{
