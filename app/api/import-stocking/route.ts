@@ -33,6 +33,15 @@ export async function GET(request: Request) {
     errors.push(`pa: ${e.message}`);
   }
 
+  // ── CT: CT DEEP ArcGIS Feature Service ────────────────────────────────────
+  try {
+    const ctRecords = await fetchCT();
+    await upsert(supabase, ctRecords);
+    results.ct = ctRecords.length;
+  } catch (e: any) {
+    errors.push(`ct: ${e.message}`);
+  }
+
   return Response.json({ results, errors: errors.length ? errors : undefined });
 }
 
@@ -139,4 +148,33 @@ async function fetchPA() {
     const [river, species, yr] = key.split('|');
     return { river_name: river, state: 'pa', species, quantity: qty, stocked_date: `${yr}-04-01` };
   });
+}
+
+// ── CT helpers ────────────────────────────────────────────────────────────────
+
+async function fetchCT() {
+  const base = 'https://services1.arcgis.com/FjPcSmEFuDYlIdKC/arcgis/rest/services/Connecticut_Stocked_Streams/FeatureServer/0/query';
+  const fields = 'STOCKING_TABLE_NAME,STOCKING_TABLE_STOCKDATE,STOCKING_TABLE_ACTIVE_SITE';
+
+  const all: any[] = [];
+  let offset = 0;
+  while (true) {
+    const params = new URLSearchParams({ where: "STOCKING_TABLE_ACTIVE_SITE='Y'", outFields: fields, returnGeometry: 'false', resultRecordCount: '1000', resultOffset: String(offset), f: 'json' });
+    const res = await fetch(`${base}?${params}`, { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error(`CT ArcGIS HTTP ${res.status}`);
+    const body = await res.json();
+    if (!body.features?.length) break;
+    all.push(...body.features);
+    offset += body.features.length;
+    if (!body.exceededTransferLimit) break;
+  }
+
+  return all
+    .map(({ attributes: a }: any) => {
+      const name = a.STOCKING_TABLE_NAME?.trim();
+      if (!name || !a.STOCKING_TABLE_STOCKDATE) return null;
+      const date = new Date(a.STOCKING_TABLE_STOCKDATE).toISOString().split('T')[0];
+      return { river_name: name, state: 'ct', species: 'Trout (Mixed)', quantity: null as number | null, stocked_date: date };
+    })
+    .filter(Boolean);
 }

@@ -65,6 +65,24 @@ function buildPopupHTML(name: string, flow: number | null, temp: number | null, 
   `;
 }
 
+function toGeoJSON(rivers: RiverPoint[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: rivers.map(r => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [r.lng, r.lat] },
+      properties: {
+        id: r.id,
+        name: r.name,
+        flow: r.flow,
+        temp: r.temp,
+        updated: r.updated,
+        condition: r.flow != null ? getCondition(r.flow).label : 'Unknown',
+      },
+    })),
+  };
+}
+
 const LEGEND = [
   { label: 'Good (200–1000 cfs)', color: '#16A34A' },
   { label: 'High (>1000 cfs)',    color: '#DC2626' },
@@ -82,54 +100,42 @@ export default function MapClient({ rivers, token, currentState }: { rivers: Riv
 
   const stateConfig = STATES.find(s => s.code === currentState) ?? STATES[0];
 
+  // ── Effect 1: create map once ─────────────────────────────────────────────
   useEffect(() => {
     if (!containerRef.current || mapRef.current || !token) return;
 
-    let map: any;
+    let mapInstance: any;
 
     import('mapbox-gl').then(({ default: mapboxgl }) => {
+      if (!containerRef.current || mapRef.current) return;
       mapboxgl.accessToken = token;
 
-      map = new mapboxgl.Map({
-        container: containerRef.current!,
+      const initState = STATES.find(s => s.code === currentState) ?? STATES[0];
+
+      mapInstance = new mapboxgl.Map({
+        container: containerRef.current,
         style: 'mapbox://styles/mapbox/outdoors-v12',
-        center: stateConfig.center,
-        zoom: stateConfig.zoom,
+        center: initState.center,
+        zoom: initState.zoom,
         attributionControl: false,
       });
 
-      map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
-      map.addControl(new mapboxgl.GeolocateControl({ trackUserLocation: false }), 'top-right');
+      mapInstance.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      mapInstance.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
+      mapInstance.addControl(new mapboxgl.GeolocateControl({ trackUserLocation: false }), 'top-right');
 
-      mapRef.current = map;
+      mapRef.current = mapInstance;
 
-      map.on('load', () => {
-        const geojson: GeoJSON.FeatureCollection = {
-          type: 'FeatureCollection',
-          features: rivers.map(r => ({
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: [r.lng, r.lat] },
-            properties: {
-              id: r.id,
-              name: r.name,
-              flow: r.flow,
-              temp: r.temp,
-              updated: r.updated,
-              condition: r.flow != null ? getCondition(r.flow).label : 'Unknown',
-            },
-          })),
-        };
-
-        map.addSource('gauges', {
+      mapInstance.on('load', () => {
+        mapInstance.addSource('gauges', {
           type: 'geojson',
-          data: geojson,
+          data: { type: 'FeatureCollection', features: [] },
           cluster: true,
           clusterMaxZoom: 10,
           clusterRadius: 40,
         });
 
-        map.addLayer({
+        mapInstance.addLayer({
           id: 'clusters',
           type: 'circle',
           source: 'gauges',
@@ -143,7 +149,7 @@ export default function MapClient({ rivers, token, currentState }: { rivers: Riv
           },
         });
 
-        map.addLayer({
+        mapInstance.addLayer({
           id: 'cluster-count',
           type: 'symbol',
           source: 'gauges',
@@ -156,7 +162,7 @@ export default function MapClient({ rivers, token, currentState }: { rivers: Riv
           paint: { 'text-color': '#ffffff' },
         });
 
-        map.addLayer({
+        mapInstance.addLayer({
           id: 'gauge-points',
           type: 'circle',
           source: 'gauges',
@@ -176,12 +182,12 @@ export default function MapClient({ rivers, token, currentState }: { rivers: Riv
           },
         });
 
-        map.on('mouseenter', 'gauge-points', () => { map.getCanvas().style.cursor = 'pointer'; });
-        map.on('mouseleave', 'gauge-points', () => { map.getCanvas().style.cursor = ''; });
-        map.on('mouseenter', 'clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
-        map.on('mouseleave', 'clusters', () => { map.getCanvas().style.cursor = ''; });
+        mapInstance.on('mouseenter', 'gauge-points', () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
+        mapInstance.on('mouseleave', 'gauge-points', () => { mapInstance.getCanvas().style.cursor = ''; });
+        mapInstance.on('mouseenter', 'clusters',     () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
+        mapInstance.on('mouseleave', 'clusters',     () => { mapInstance.getCanvas().style.cursor = ''; });
 
-        map.on('click', 'gauge-points', (e: any) => {
+        mapInstance.on('click', 'gauge-points', (e: any) => {
           const feat = e.features?.[0];
           if (!feat) return;
           const { name, flow, temp, updated } = feat.properties;
@@ -189,16 +195,16 @@ export default function MapClient({ rivers, token, currentState }: { rivers: Riv
           new mapboxgl.Popup({ closeButton: true, maxWidth: '300px', offset: 12 })
             .setLngLat([lng, lat])
             .setHTML(buildPopupHTML(name, flow, temp, updated))
-            .addTo(map);
+            .addTo(mapInstance);
         });
 
-        map.on('click', 'clusters', (e: any) => {
+        mapInstance.on('click', 'clusters', (e: any) => {
           const feat = e.features?.[0];
           if (!feat) return;
           const clusterId = feat.properties.cluster_id;
-          (map.getSource('gauges') as any).getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
+          (mapInstance.getSource('gauges') as any).getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
             if (err) return;
-            map.easeTo({ center: (feat.geometry as any).coordinates, zoom });
+            mapInstance.easeTo({ center: (feat.geometry as any).coordinates, zoom });
           });
         });
 
@@ -207,10 +213,24 @@ export default function MapClient({ rivers, token, currentState }: { rivers: Riv
     });
 
     return () => {
-      map?.remove();
+      mapInstance?.remove();
       mapRef.current = null;
+      setLoaded(false);
     };
-  }, [token, currentState]);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Effect 2: fly to new state center when state changes ──────────────────
+  useEffect(() => {
+    if (!mapRef.current || !loaded) return;
+    mapRef.current.flyTo({ center: stateConfig.center, zoom: stateConfig.zoom, duration: 1000 });
+  }, [currentState, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Effect 3: update gauge data when rivers prop changes ──────────────────
+  useEffect(() => {
+    if (!mapRef.current || !loaded) return;
+    const source = mapRef.current.getSource('gauges');
+    if (source) source.setData(toGeoJSON(rivers));
+  }, [rivers, loaded]);
 
   function flyTo(river: RiverPoint) {
     if (!mapRef.current) return;
@@ -258,7 +278,6 @@ export default function MapClient({ rivers, token, currentState }: { rivers: Riv
         <div style={{ padding: '1rem', borderBottom: '1px solid #E5E7EB' }}>
           <h1 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#085041', marginBottom: '0.5rem' }}>River Map</h1>
 
-          {/* State selector */}
           <select
             value={currentState}
             onChange={e => {
