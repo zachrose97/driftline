@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -360,10 +361,12 @@ export default function LogbookPage() {
             {catches.map(c => (
               <div key={c.id} style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                 {c.photo_url && (
-                  <img
+                  <Image
                     src={c.photo_url}
                     alt="Catch photo"
-                    style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }}
+                    width={80}
+                    height={80}
+                    style={{ objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }}
                   />
                 )}
                 <div style={{ flex: 1, minWidth: '200px' }}>
