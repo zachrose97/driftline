@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { RiverPoint, AccessPoint } from './page';
+import { supabase } from '@/lib/supabase';
 
 const STATES: { code: string; label: string; center: [number, number]; zoom: number }[] = [
   { code: 'ny', label: 'New York',       center: [-75.4,  42.9], zoom: 7 },
@@ -63,6 +64,40 @@ function buildPopupHTML(name: string, flow: number | null, temp: number | null, 
       ${updated ? `<p style="font-size:10px;color:#D1D5DB;margin:8px 0 0">Updated ${updated}</p>` : ''}
     </div>
   `;
+}
+
+function parseUSGS(sites: any[]): RiverPoint[] {
+  const siteMap: Record<string, RiverPoint> = {};
+  sites.forEach((site: any) => {
+    const id = site.sourceInfo.siteCode[0].value;
+    const geo = site.sourceInfo.geoLocation?.geogLocation;
+    if (!siteMap[id]) {
+      siteMap[id] = {
+        id,
+        name: site.sourceInfo.siteName,
+        lat: geo?.latitude ?? null,
+        lng: geo?.longitude ?? null,
+        flow: null,
+        temp: null,
+        updated: null,
+      };
+    }
+    const raw = site.values[0]?.value[0]?.value;
+    const value = parseFloat(raw);
+    const desc = site.variable.variableDescription;
+    const dateTime = site.values[0]?.value[0]?.dateTime;
+    if (desc.includes('Discharge') && !isNaN(value)) siteMap[id].flow = value;
+    if (desc.includes('Temperature') && !isNaN(value)) siteMap[id].temp = value;
+    if (dateTime && !siteMap[id].updated) {
+      siteMap[id].updated = new Date(dateTime).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+  });
+  return Object.values(siteMap).filter(
+    (r): r is RiverPoint => r.lat !== null && r.lng !== null && r.flow !== null,
+  );
 }
 
 function toGeoJSON(rivers: RiverPoint[]): GeoJSON.FeatureCollection {
@@ -132,14 +167,21 @@ const LEGEND = [
   { label: 'Low (<50 cfs)',       color: '#9CA3AF' },
 ];
 
-export default function MapClient({ rivers, token, currentState, accessPoints }: { rivers: RiverPoint[]; token: string; currentState: string; accessPoints: AccessPoint[] }) {
+export default function MapClient({ token }: { token: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const rawState = searchParams.get('state') ?? 'ny';
+  const currentState = STATES.some(s => s.code === rawState) ? rawState : 'ny';
+
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const [loaded, setLoaded] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAccess, setShowAccess] = useState(true);
+  const [rivers, setRivers] = useState<RiverPoint[]>([]);
+  const [accessPoints, setAccessPoints] = useState<AccessPoint[]>([]);
+  const [gaugesLoading, setGaugesLoading] = useState(false);
 
   const stateConfig = STATES.find(s => s.code === currentState) ?? STATES[0];
 
@@ -153,13 +195,11 @@ export default function MapClient({ rivers, token, currentState, accessPoints }:
       if (!containerRef.current || mapRef.current) return;
       mapboxgl.accessToken = token;
 
-      const initState = STATES.find(s => s.code === currentState) ?? STATES[0];
-
       mapInstance = new mapboxgl.Map({
         container: containerRef.current,
         style: 'mapbox://styles/mapbox/outdoors-v12',
-        center: initState.center,
-        zoom: initState.zoom,
+        center: stateConfig.center,
+        zoom: stateConfig.zoom,
         attributionControl: false,
       });
 
@@ -300,14 +340,14 @@ export default function MapClient({ rivers, token, currentState, accessPoints }:
     mapRef.current.flyTo({ center: stateConfig.center, zoom: stateConfig.zoom, duration: 1000 });
   }, [currentState, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Effect 3: update gauge data when rivers prop changes ──────────────────
+  // ── Effect 3: update gauge data when rivers state changes ─────────────────
   useEffect(() => {
     if (!mapRef.current || !loaded) return;
     const source = mapRef.current.getSource('gauges');
     if (source) source.setData(toGeoJSON(rivers));
   }, [rivers, loaded]);
 
-  // ── Effect 4: update access point data when accessPoints prop changes ─────
+  // ── Effect 4: update access point data when accessPoints state changes ─────
   useEffect(() => {
     if (!mapRef.current || !loaded) return;
     const src = mapRef.current.getSource('access-points');
@@ -319,6 +359,44 @@ export default function MapClient({ rivers, token, currentState, accessPoints }:
     if (!mapRef.current || !loaded) return;
     mapRef.current.setLayoutProperty('access-point-dots', 'visibility', showAccess ? 'visible' : 'none');
   }, [showAccess, loaded]);
+
+  // ── Effect 6: fetch USGS gauges when state changes (client-side) ──────────
+  useEffect(() => {
+    const controller = new AbortController();
+    setGaugesLoading(true);
+    setRivers([]);
+
+    fetch(
+      `https://waterservices.usgs.gov/nwis/iv/?format=json&stateCd=${currentState}&parameterCd=00060,00010&siteStatus=active`,
+      { signal: controller.signal },
+    )
+      .then(r => r.json())
+      .then(data => {
+        setRivers(parseUSGS(data.value.timeSeries));
+        setGaugesLoading(false);
+      })
+      .catch(err => {
+        if (err.name !== 'AbortError') setGaugesLoading(false);
+      });
+
+    return () => { controller.abort(); };
+  }, [currentState]);
+
+  // ── Effect 7: fetch access points when state changes (client-side) ────────
+  useEffect(() => {
+    let cancelled = false;
+    setAccessPoints([]);
+
+    supabase
+      .from('access_points')
+      .select('id,name,lat,lng,water_name,county,access_type,species,parking,fee,ada,notes,detail_url')
+      .eq('state', currentState)
+      .then(({ data }) => {
+        if (!cancelled) setAccessPoints(data ?? []);
+      });
+
+    return () => { cancelled = true; };
+  }, [currentState]);
 
   function flyTo(river: RiverPoint) {
     if (!mapRef.current) return;
@@ -381,8 +459,11 @@ export default function MapClient({ rivers, token, currentState, accessPoints }:
           </select>
 
           <p style={{ fontSize: '0.78rem', color: '#9CA3AF', marginBottom: '0.5rem' }}>
-            {rivers.length} USGS gauges · {stateConfig.label}
+            {gaugesLoading
+              ? `Loading ${stateConfig.label} gauges…`
+              : `${rivers.length} USGS gauges · ${stateConfig.label}`}
           </p>
+
           {accessPoints.length > 0 && (
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#374151', cursor: 'pointer', marginBottom: '0.75rem' }}>
               <input
@@ -395,6 +476,7 @@ export default function MapClient({ rivers, token, currentState, accessPoints }:
               {accessPoints.length} access points
             </label>
           )}
+
           <input
             type="text"
             placeholder="Search rivers..."
@@ -469,9 +551,9 @@ export default function MapClient({ rivers, token, currentState, accessPoints }:
               Refine search to see more ({filtered.length - 150} hidden)
             </p>
           )}
-          {filtered.length === 0 && (
+          {filtered.length === 0 && !gaugesLoading && (
             <p style={{ padding: '2rem 1rem', fontSize: '0.85rem', color: '#9CA3AF', textAlign: 'center' }}>
-              No rivers match "{search}"
+              {search ? `No rivers match "${search}"` : 'No gauge data available'}
             </p>
           )}
         </div>
