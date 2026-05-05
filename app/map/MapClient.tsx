@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { RiverPoint, AccessPoint } from './page';
@@ -89,16 +89,54 @@ function parseUSGS(sites: any[]): RiverPoint[] {
     if (desc.includes('Discharge') && !isNaN(value)) siteMap[id].flow = value;
     if (desc.includes('Temperature') && !isNaN(value)) siteMap[id].temp = value;
     if (dateTime && !siteMap[id].updated) {
-      siteMap[id].updated = new Date(dateTime).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      siteMap[id].updated = new Date(dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
   });
   return Object.values(siteMap).filter(
     (r): r is RiverPoint => r.lat !== null && r.lng !== null && r.flow !== null,
   );
 }
+
+// ── Stocking filter ───────────────────────────────────────────────────────────
+
+const STOCKING_FILTERS = [
+  { value: 'all',   label: 'All' },
+  { value: 'year',  label: 'This year' },
+  { value: 'month', label: 'Last 30d' },
+  { value: 'week',  label: 'Last 7d' },
+  { value: 'day',   label: 'Last 24h' },
+] as const;
+type StockingFilter = typeof STOCKING_FILTERS[number]['value'];
+
+function normalizeRiverName(s: string): string {
+  return s.toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+function lookupStocking(map: Map<string, string>, name: string | null): string | null {
+  if (!name) return null;
+  const key = normalizeRiverName(name);
+  if (map.has(key)) return map.get(key)!;
+  // Partial-match fallback for name format differences across agencies
+  for (const [k, date] of map) {
+    if (k.length > 5 && (k.includes(key) || key.includes(k))) return date;
+  }
+  return null;
+}
+
+function isWithinFilter(dateStr: string | null, filter: StockingFilter): boolean {
+  if (filter === 'all') return true;
+  if (!dateStr) return false;
+  // Use T12:00:00 to avoid UTC midnight timezone edge cases
+  const diffMs = Date.now() - new Date(dateStr + 'T12:00:00').getTime();
+  switch (filter) {
+    case 'day':   return diffMs <= 86_400_000;
+    case 'week':  return diffMs <= 7 * 86_400_000;
+    case 'month': return diffMs <= 30 * 86_400_000;
+    case 'year':  return new Date(dateStr).getFullYear() === new Date().getFullYear();
+  }
+}
+
+// ── Map data helpers ──────────────────────────────────────────────────────────
 
 function toGeoJSON(rivers: RiverPoint[]): GeoJSON.FeatureCollection {
   return {
@@ -118,31 +156,41 @@ function toGeoJSON(rivers: RiverPoint[]): GeoJSON.FeatureCollection {
   };
 }
 
-function accessToGeoJSON(points: AccessPoint[]): GeoJSON.FeatureCollection {
+function accessToGeoJSON(
+  points: AccessPoint[],
+  stockingLookup: Map<string, string>,
+): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
-    features: points.map(p => ({
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
-      properties: {
-        name:        p.name,
-        water_name:  p.water_name,
-        county:      p.county,
-        access_type: p.access_type,
-        species:     p.species,
-        parking:     p.parking,
-        fee:         p.fee,
-        ada:         p.ada,
-        notes:       p.notes,
-        detail_url:  p.detail_url,
-      },
-    })),
+    features: points.map(p => {
+      const last_stocked = lookupStocking(stockingLookup, p.water_name ?? p.name);
+      return {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+        properties: {
+          name:         p.name,
+          water_name:   p.water_name,
+          county:       p.county,
+          access_type:  p.access_type,
+          species:      p.species,
+          parking:      p.parking,
+          fee:          p.fee,
+          ada:          p.ada,
+          notes:        p.notes,
+          detail_url:   p.detail_url,
+          last_stocked,
+        },
+      };
+    }),
   };
 }
 
 function buildAccessPopupHTML(props: any): string {
-  const { name, water_name, county, access_type, species, parking, fee, ada, notes, detail_url } = props;
+  const { name, water_name, county, access_type, species, parking, fee, ada, notes, detail_url, last_stocked } = props;
   const display = (water_name && water_name !== name) ? titleCase(water_name) : titleCase(name);
+  const formattedDate = last_stocked && last_stocked !== 'null'
+    ? new Date(last_stocked + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
   return `
     <div style="font-family:sans-serif;min-width:180px;padding:4px 0">
       <p style="font-size:13px;font-weight:700;color:#111827;margin:0 0 6px">${display}</p>
@@ -150,6 +198,7 @@ function buildAccessPopupHTML(props: any): string {
         ${access_type ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:#EFF6FF;color:#2563EB;font-weight:600">${access_type}</span>` : ''}
         ${county ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:#F3F4F6;color:#6B7280">${county} County</span>` : ''}
       </div>
+      ${formattedDate ? `<p style="font-size:12px;color:#085041;font-weight:600;margin:0 0 6px">Last stocked: ${formattedDate}</p>` : ''}
       ${species && species !== 'null' ? `<p style="font-size:11px;color:#374151;margin:0 0 4px"><strong>Species:</strong> ${species}</p>` : ''}
       ${parking && parking !== 'null' ? `<p style="font-size:11px;color:#374151;margin:0 0 4px"><strong>Parking:</strong> ${parking}</p>` : ''}
       ${fee === 'Y' ? `<p style="font-size:11px;color:#DC2626;font-weight:600;margin:0 0 4px">Fee required</p>` : ''}
@@ -167,6 +216,8 @@ const LEGEND = [
   { label: 'Low (<50 cfs)',       color: '#9CA3AF' },
 ];
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function MapClient({ token }: { token: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -181,11 +232,22 @@ export default function MapClient({ token }: { token: string }) {
   const [showAccess, setShowAccess] = useState(true);
   const [rivers, setRivers] = useState<RiverPoint[]>([]);
   const [accessPoints, setAccessPoints] = useState<AccessPoint[]>([]);
+  const [stockingLookup, setStockingLookup] = useState<Map<string, string>>(new Map());
+  const [stockingFilter, setStockingFilter] = useState<StockingFilter>('all');
   const [gaugesLoading, setGaugesLoading] = useState(false);
 
   const stateConfig = STATES.find(s => s.code === currentState) ?? STATES[0];
 
-  // ── Effect 1: create map once ─────────────────────────────────────────────
+  // Access points filtered by stocking date, memoized to stabilize Effect 4 deps
+  const displayedAccessPoints = useMemo(() => {
+    if (stockingFilter === 'all') return accessPoints;
+    return accessPoints.filter(p => {
+      const lastStocked = lookupStocking(stockingLookup, p.water_name ?? p.name);
+      return isWithinFilter(lastStocked, stockingFilter);
+    });
+  }, [accessPoints, stockingLookup, stockingFilter]);
+
+  // ── Effect 1: create map once ───────────────────────────────────────────────
   useEffect(() => {
     if (!containerRef.current || mapRef.current || !token) return;
 
@@ -291,7 +353,6 @@ export default function MapClient({ token }: { token: string }) {
           });
         });
 
-        // ── Access points source + layer ──────────────────────────────────────
         mapInstance.addSource('access-points', {
           type: 'geojson',
           data: { type: 'FeatureCollection', features: [] },
@@ -334,33 +395,33 @@ export default function MapClient({ token }: { token: string }) {
     };
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Effect 2: fly to new state center when state changes ──────────────────
+  // ── Effect 2: fly to new state ──────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !loaded) return;
     mapRef.current.flyTo({ center: stateConfig.center, zoom: stateConfig.zoom, duration: 1000 });
   }, [currentState, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Effect 3: update gauge data when rivers state changes ─────────────────
+  // ── Effect 3: update gauge layer ────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !loaded) return;
-    const source = mapRef.current.getSource('gauges');
-    if (source) source.setData(toGeoJSON(rivers));
+    const src = mapRef.current.getSource('gauges');
+    if (src) src.setData(toGeoJSON(rivers));
   }, [rivers, loaded]);
 
-  // ── Effect 4: update access point data when accessPoints state changes ─────
+  // ── Effect 4: update access points layer (filtered + enriched with stocking)
   useEffect(() => {
     if (!mapRef.current || !loaded) return;
     const src = mapRef.current.getSource('access-points');
-    if (src) src.setData(accessToGeoJSON(accessPoints));
-  }, [accessPoints, loaded]);
+    if (src) src.setData(accessToGeoJSON(displayedAccessPoints, stockingLookup));
+  }, [displayedAccessPoints, stockingLookup, loaded]);
 
-  // ── Effect 5: toggle access points layer visibility ───────────────────────
+  // ── Effect 5: toggle access points visibility ───────────────────────────────
   useEffect(() => {
     if (!mapRef.current || !loaded) return;
     mapRef.current.setLayoutProperty('access-point-dots', 'visibility', showAccess ? 'visible' : 'none');
   }, [showAccess, loaded]);
 
-  // ── Effect 6: fetch USGS gauges when state changes (client-side) ──────────
+  // ── Effect 6: fetch USGS gauges client-side when state changes ──────────────
   useEffect(() => {
     const controller = new AbortController();
     setGaugesLoading(true);
@@ -382,7 +443,7 @@ export default function MapClient({ token }: { token: string }) {
     return () => { controller.abort(); };
   }, [currentState]);
 
-  // ── Effect 7: fetch access points when state changes (client-side) ────────
+  // ── Effect 7: fetch access points when state changes ────────────────────────
   useEffect(() => {
     let cancelled = false;
     setAccessPoints([]);
@@ -393,6 +454,29 @@ export default function MapClient({ token }: { token: string }) {
       .eq('state', currentState)
       .then(({ data }) => {
         if (!cancelled) setAccessPoints(data ?? []);
+      });
+
+    return () => { cancelled = true; };
+  }, [currentState]);
+
+  // ── Effect 8: fetch stocking lookup when state changes ──────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    setStockingLookup(new Map());
+
+    supabase
+      .from('stocking_reports')
+      .select('river_name,stocked_date')
+      .eq('state', currentState)
+      .order('stocked_date', { ascending: false })
+      .then(({ data }) => {
+        if (cancelled) return;
+        const map = new Map<string, string>();
+        for (const row of data ?? []) {
+          const key = normalizeRiverName(row.river_name);
+          if (!map.has(key)) map.set(key, row.stocked_date);
+        }
+        setStockingLookup(map);
       });
 
     return () => { cancelled = true; };
@@ -449,6 +533,7 @@ export default function MapClient({ token }: { token: string }) {
             onChange={e => {
               setSearch('');
               setSelectedId(null);
+              setStockingFilter('all');
               router.push(`/map?state=${e.target.value}`);
             }}
             style={{ width: '100%', padding: '0.45rem 0.75rem', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '0.85rem', color: '#111827', background: '#fff', cursor: 'pointer', marginBottom: '0.5rem', boxSizing: 'border-box' }}
@@ -465,16 +550,48 @@ export default function MapClient({ token }: { token: string }) {
           </p>
 
           {accessPoints.length > 0 && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#374151', cursor: 'pointer', marginBottom: '0.75rem' }}>
-              <input
-                type="checkbox"
-                checked={showAccess}
-                onChange={e => setShowAccess(e.target.checked)}
-                style={{ accentColor: '#2563EB', width: '14px', height: '14px' }}
-              />
-              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#2563EB', display: 'inline-block', flexShrink: 0 }} />
-              {accessPoints.length} access points
-            </label>
+            <>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#374151', cursor: 'pointer', marginBottom: '6px' }}>
+                <input
+                  type="checkbox"
+                  checked={showAccess}
+                  onChange={e => setShowAccess(e.target.checked)}
+                  style={{ accentColor: '#2563EB', width: '14px', height: '14px' }}
+                />
+                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#2563EB', display: 'inline-block', flexShrink: 0 }} />
+                {displayedAccessPoints.length}
+                {stockingFilter !== 'all' && (
+                  <span style={{ color: '#9CA3AF' }}>/{accessPoints.length}</span>
+                )}
+                {' '}access points
+              </label>
+
+              {showAccess && (
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <p style={{ fontSize: '0.7rem', color: '#9CA3AF', marginBottom: '4px' }}>Filter by last stocked</p>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                    {STOCKING_FILTERS.map(f => (
+                      <button
+                        key={f.value}
+                        onClick={() => setStockingFilter(f.value)}
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '20px',
+                          border: `1px solid ${stockingFilter === f.value ? '#2563EB' : '#D1D5DB'}`,
+                          background: stockingFilter === f.value ? '#EFF6FF' : 'transparent',
+                          color: stockingFilter === f.value ? '#2563EB' : '#6B7280',
+                          fontSize: '0.72rem',
+                          fontWeight: stockingFilter === f.value ? '600' : '400',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <input
