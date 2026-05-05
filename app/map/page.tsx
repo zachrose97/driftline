@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import MapClient from './MapClient';
+import { supabase } from '@/lib/supabase';
 
 export type RiverPoint = {
   id: string;
@@ -9,6 +10,22 @@ export type RiverPoint = {
   flow: number | null;
   temp: number | null;
   updated: string | null;
+};
+
+export type AccessPoint = {
+  id: number;
+  name: string;
+  lat: number;
+  lng: number;
+  water_name: string | null;
+  county: string | null;
+  access_type: string | null;
+  species: string | null;
+  parking: string | null;
+  fee: string | null;
+  ada: string | null;
+  notes: string | null;
+  detail_url: string | null;
 };
 
 const VALID_STATES = ['ny','pa','vt','me','nh','ma','ct','va','wv','nc','co','mt','id','wy','wa','or','ca'];
@@ -44,6 +61,17 @@ export default async function MapPage({
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? '';
 
   let rivers: RiverPoint[] = [];
+  let accessPoints: AccessPoint[] = [];
+
+  try {
+    const { data } = await supabase
+      .from('access_points')
+      .select('id,name,lat,lng,water_name,county,access_type,species,parking,fee,ada,notes,detail_url')
+      .eq('state', state);
+    if (data) accessPoints = data;
+  } catch {
+    // Supabase unavailable — map renders without access points
+  }
 
   try {
     const res = await fetch(
@@ -93,5 +121,5 @@ export default async function MapPage({
     // USGS unavailable — map renders with no points
   }
 
-  return <MapClient rivers={rivers} token={token} currentState={state} />;
+  return <MapClient rivers={rivers} token={token} currentState={state} accessPoints={accessPoints} />;
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import type { RiverPoint } from './page';
+import type { RiverPoint, AccessPoint } from './page';
 
 const STATES: { code: string; label: string; center: [number, number]; zoom: number }[] = [
   { code: 'ny', label: 'New York',       center: [-75.4,  42.9], zoom: 7 },
@@ -83,6 +83,48 @@ function toGeoJSON(rivers: RiverPoint[]): GeoJSON.FeatureCollection {
   };
 }
 
+function accessToGeoJSON(points: AccessPoint[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: points.map(p => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+      properties: {
+        name:        p.name,
+        water_name:  p.water_name,
+        county:      p.county,
+        access_type: p.access_type,
+        species:     p.species,
+        parking:     p.parking,
+        fee:         p.fee,
+        ada:         p.ada,
+        notes:       p.notes,
+        detail_url:  p.detail_url,
+      },
+    })),
+  };
+}
+
+function buildAccessPopupHTML(props: any): string {
+  const { name, water_name, county, access_type, species, parking, fee, ada, notes, detail_url } = props;
+  const display = (water_name && water_name !== name) ? titleCase(water_name) : titleCase(name);
+  return `
+    <div style="font-family:sans-serif;min-width:180px;padding:4px 0">
+      <p style="font-size:13px;font-weight:700;color:#111827;margin:0 0 6px">${display}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">
+        ${access_type ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:#EFF6FF;color:#2563EB;font-weight:600">${access_type}</span>` : ''}
+        ${county ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:#F3F4F6;color:#6B7280">${county} County</span>` : ''}
+      </div>
+      ${species && species !== 'null' ? `<p style="font-size:11px;color:#374151;margin:0 0 4px"><strong>Species:</strong> ${species}</p>` : ''}
+      ${parking && parking !== 'null' ? `<p style="font-size:11px;color:#374151;margin:0 0 4px"><strong>Parking:</strong> ${parking}</p>` : ''}
+      ${fee === 'Y' ? `<p style="font-size:11px;color:#DC2626;font-weight:600;margin:0 0 4px">Fee required</p>` : ''}
+      ${ada && ada !== 'null' ? `<p style="font-size:11px;color:#374151;margin:0 0 4px">${ada}</p>` : ''}
+      ${notes && notes !== 'null' ? `<p style="font-size:11px;color:#6B7280;margin:0 0 4px">${notes}</p>` : ''}
+      ${detail_url && detail_url !== 'null' ? `<a href="${detail_url}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#2563EB">More info →</a>` : ''}
+    </div>
+  `;
+}
+
 const LEGEND = [
   { label: 'Good (200–1000 cfs)', color: '#16A34A' },
   { label: 'High (>1000 cfs)',    color: '#DC2626' },
@@ -90,13 +132,14 @@ const LEGEND = [
   { label: 'Low (<50 cfs)',       color: '#9CA3AF' },
 ];
 
-export default function MapClient({ rivers, token, currentState }: { rivers: RiverPoint[]; token: string; currentState: string }) {
+export default function MapClient({ rivers, token, currentState, accessPoints }: { rivers: RiverPoint[]; token: string; currentState: string; accessPoints: AccessPoint[] }) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const [loaded, setLoaded] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showAccess, setShowAccess] = useState(true);
 
   const stateConfig = STATES.find(s => s.code === currentState) ?? STATES[0];
 
@@ -208,6 +251,38 @@ export default function MapClient({ rivers, token, currentState }: { rivers: Riv
           });
         });
 
+        // ── Access points source + layer ──────────────────────────────────────
+        mapInstance.addSource('access-points', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: [] },
+        });
+
+        mapInstance.addLayer({
+          id: 'access-point-dots',
+          type: 'circle',
+          source: 'access-points',
+          paint: {
+            'circle-radius': 7,
+            'circle-color': '#2563EB',
+            'circle-stroke-width': 2,
+            'circle-stroke-color': '#ffffff',
+            'circle-opacity': 0.85,
+          },
+        });
+
+        mapInstance.on('mouseenter', 'access-point-dots', () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
+        mapInstance.on('mouseleave', 'access-point-dots', () => { mapInstance.getCanvas().style.cursor = ''; });
+
+        mapInstance.on('click', 'access-point-dots', (e: any) => {
+          const feat = e.features?.[0];
+          if (!feat) return;
+          const [lng, lat] = (feat.geometry as any).coordinates;
+          new mapboxgl.Popup({ closeButton: true, maxWidth: '280px', offset: 12 })
+            .setLngLat([lng, lat])
+            .setHTML(buildAccessPopupHTML(feat.properties))
+            .addTo(mapInstance);
+        });
+
         setLoaded(true);
       });
     });
@@ -231,6 +306,19 @@ export default function MapClient({ rivers, token, currentState }: { rivers: Riv
     const source = mapRef.current.getSource('gauges');
     if (source) source.setData(toGeoJSON(rivers));
   }, [rivers, loaded]);
+
+  // ── Effect 4: update access point data when accessPoints prop changes ─────
+  useEffect(() => {
+    if (!mapRef.current || !loaded) return;
+    const src = mapRef.current.getSource('access-points');
+    if (src) src.setData(accessToGeoJSON(accessPoints));
+  }, [accessPoints, loaded]);
+
+  // ── Effect 5: toggle access points layer visibility ───────────────────────
+  useEffect(() => {
+    if (!mapRef.current || !loaded) return;
+    mapRef.current.setLayoutProperty('access-point-dots', 'visibility', showAccess ? 'visible' : 'none');
+  }, [showAccess, loaded]);
 
   function flyTo(river: RiverPoint) {
     if (!mapRef.current) return;
@@ -292,9 +380,21 @@ export default function MapClient({ rivers, token, currentState }: { rivers: Riv
             ))}
           </select>
 
-          <p style={{ fontSize: '0.78rem', color: '#9CA3AF', marginBottom: '0.75rem' }}>
+          <p style={{ fontSize: '0.78rem', color: '#9CA3AF', marginBottom: '0.5rem' }}>
             {rivers.length} USGS gauges · {stateConfig.label}
           </p>
+          {accessPoints.length > 0 && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#374151', cursor: 'pointer', marginBottom: '0.75rem' }}>
+              <input
+                type="checkbox"
+                checked={showAccess}
+                onChange={e => setShowAccess(e.target.checked)}
+                style={{ accentColor: '#2563EB', width: '14px', height: '14px' }}
+              />
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#2563EB', display: 'inline-block', flexShrink: 0 }} />
+              {accessPoints.length} access points
+            </label>
+          )}
           <input
             type="text"
             placeholder="Search rivers..."
