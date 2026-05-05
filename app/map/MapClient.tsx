@@ -41,7 +41,7 @@ function titleCase(str: string) {
   return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 }
 
-function buildPopupHTML(name: string, flow: number | null, temp: number | null, updated: string | null) {
+function buildPopupHTML(name: string, flow: number | null, temp: number | null, updated: string | null, siteId: string, state: string) {
   const cond = flow != null ? getCondition(flow) : null;
   return `
     <div style="font-family:sans-serif;min-width:200px;padding:4px 0">
@@ -62,6 +62,7 @@ function buildPopupHTML(name: string, flow: number | null, temp: number | null, 
         ` : ''}
       </div>
       ${updated ? `<p style="font-size:10px;color:#D1D5DB;margin:8px 0 0">Updated ${updated}</p>` : ''}
+      <a href="/river/${state}-${siteId}" style="display:inline-block;margin-top:10px;font-size:11px;color:#085041;text-decoration:none;font-weight:600">View river details →</a>
     </div>
   `;
 }
@@ -335,11 +336,11 @@ export default function MapClient({ token }: { token: string }) {
         mapInstance.on('click', 'gauge-points', (e: any) => {
           const feat = e.features?.[0];
           if (!feat) return;
-          const { name, flow, temp, updated } = feat.properties;
+          const { id: siteId, name, flow, temp, updated } = feat.properties;
           const [lng, lat] = (feat.geometry as any).coordinates;
           new mapboxgl.Popup({ closeButton: true, maxWidth: '300px', offset: 12 })
             .setLngLat([lng, lat])
-            .setHTML(buildPopupHTML(name, flow, temp, updated))
+            .setHTML(buildPopupHTML(name, flow, temp, updated, siteId, currentState))
             .addTo(mapInstance);
         });
 
@@ -489,7 +490,7 @@ export default function MapClient({ token }: { token: string }) {
     import('mapbox-gl').then(({ default: mapboxgl }) => {
       new mapboxgl.Popup({ closeButton: true, maxWidth: '300px', offset: 12 })
         .setLngLat([river.lng, river.lat])
-        .setHTML(buildPopupHTML(river.name, river.flow, river.temp, river.updated))
+        .setHTML(buildPopupHTML(river.name, river.flow, river.temp, river.updated, river.id, currentState))
         .addTo(mapRef.current!);
     });
   }

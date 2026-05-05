@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const STATES: { code: string; label: string }[] = [
   { code: 'ny', label: 'New York' },
@@ -126,7 +127,8 @@ export default function StreamsClient({ rivers, currentState, usgsDown }: { rive
           {filtered.map((river: any) => {
             const condition = getCondition(river.flow);
             return (
-              <div key={river.id} style={{ background: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '1.25rem' }}>
+              <Link key={river.id} href={`/river/${currentState}-${river.id}`} style={{ textDecoration: 'none' }}>
+              <div style={{ background: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '1.25rem', cursor: 'pointer', transition: 'border-color 0.15s', height: '100%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                   <h2 style={{ fontSize: '0.88rem', fontWeight: '600', color: '#111827', lineHeight: '1.4', flex: 1, marginRight: '8px' }}>
                     {titleCase(river.name)}
@@ -159,6 +161,7 @@ export default function StreamsClient({ rivers, currentState, usgsDown }: { rive
                   <p style={{ fontSize: '0.7rem', color: '#D1D5DB', marginTop: '8px' }}>Updated {river.updated}</p>
                 )}
               </div>
+              </Link>
             );
           })}
         </div>
