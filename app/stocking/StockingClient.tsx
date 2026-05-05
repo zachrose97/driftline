@@ -26,7 +26,13 @@ function getSpeciesStyle(species: string) {
 }
 
 function daysAgo(dateStr: string): string {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  const diff = Math.floor((Date.now() - new Date(dateStr + 'T12:00:00').getTime()) / 86400000);
+  if (diff < 0) {
+    const ahead = Math.abs(diff);
+    if (ahead === 1) return 'Tomorrow';
+    if (ahead < 7) return `In ${ahead} days`;
+    return `Scheduled ${new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
+  }
   if (diff === 0) return 'Today';
   if (diff === 1) return '1 day ago';
   if (diff < 7) return `${diff} days ago`;

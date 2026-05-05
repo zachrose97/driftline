@@ -41,6 +41,12 @@ function celsiusToF(c: number) {
 
 function daysAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr + 'T12:00:00').getTime()) / 86400000);
+  if (diff < 0) {
+    const ahead = Math.abs(diff);
+    if (ahead === 1) return 'Tomorrow';
+    if (ahead < 7) return `In ${ahead} days`;
+    return `Scheduled ${new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
+  }
   if (diff === 0) return 'Today';
   if (diff === 1) return '1 day ago';
   if (diff < 7) return `${diff} days ago`;
@@ -201,7 +207,7 @@ export default async function RiverPage({
                 {usgs.flow != null ? usgs.flow.toLocaleString() : '—'}
                 {usgs.flow != null && <span style={{ fontSize: '0.85rem', fontWeight: '400', color: '#9CA3AF', marginLeft: '4px' }}>cfs</span>}
               </p>
-              <p style={{ fontSize: '0.78rem', color: '#9CA3AF', margin: '4px 0 0' }}>Flow</p>
+              <p style={{ fontSize: '0.78rem', color: '#9CA3AF', margin: '4px 0 0' }}>{usgs.flow != null ? 'Flow' : 'Flow unavailable'}</p>
             </div>
             {usgs.temp != null && (
               <div>
