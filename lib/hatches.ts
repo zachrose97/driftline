@@ -9,6 +9,7 @@ export type Hatch = {
   timeOfDay: string;
   description: string;
   flies: string[];
+  image?: string;
 };
 
 export const HATCHES: Hatch[] = [
@@ -23,6 +24,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Afternoon (2–5 pm)',
     description: 'One of the most anticipated early-season hatches in the East. Fish are aggressive and come readily to dry flies.',
     flies: ['Hendrickson Dry #12', 'Red Quill #12–14', 'Hendrickson Nymph #12'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Spiny_crawler_mayfly%2C_Ephemerella_subvaria_%2810631659063%29.jpg/500px-Spiny_crawler_mayfly%2C_Ephemerella_subvaria_%2810631659063%29.jpg',
   },
   {
     id: 'quill-gordon',
@@ -35,6 +37,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Midday',
     description: 'The classic early-season Catskill hatch. Best on cold freestone streams when water temps reach the mid-40s.',
     flies: ['Quill Gordon Dry #12–14', 'Quill Gordon Nymph #12'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Flatheaded_mayfly%2C_Epeorus_pleuralis_%2812703142244%29.jpg/500px-Flatheaded_mayfly%2C_Epeorus_pleuralis_%2812703142244%29.jpg',
   },
   {
     id: 'bwo',
@@ -47,6 +50,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Midday — best on overcast days',
     description: 'Present year-round on overcast, drizzly days. One of the most reliable hatches in the country. Fish can become extremely selective on these small flies.',
     flies: ['BWO Parachute #16–20', 'Sparkle Dun #18', 'RS2 Emerger #18–22', 'Pheasant Tail Nymph #16–18'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Small_minnow_mayfly%2C_Baetis_pluto_%2810349299574%29.jpg/500px-Small_minnow_mayfly%2C_Baetis_pluto_%2810349299574%29.jpg',
   },
   {
     id: 'sulphur',
@@ -59,6 +63,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Evening (dusk into dark)',
     description: 'Evening hatches on limestone streams and tailwaters. Fish rise steadily into darkness. One of the most prolific hatches of the season.',
     flies: ['Sulphur Dry #16', 'Sulphur Parachute #16–18', 'Sulphur Emerger #16', 'CDC Sulphur #16'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Spiny_crawler_mayfly%2C_E._dorothea_%286976238440%29.jpg/500px-Spiny_crawler_mayfly%2C_E._dorothea_%286976238440%29.jpg',
   },
   {
     id: 'march-brown',
@@ -71,6 +76,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Afternoon',
     description: 'A large, sporadic hatch on fast-water freestone streams. When it\'s on, big fish come out of hiding.',
     flies: ['March Brown Dry #10–12', 'March Brown Wet #10–12', 'Hare\'s Ear Nymph #10–12'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Flatheaded_mayfly%2C_Maccaffertium_sp._%2814008409637%29.jpg/500px-Flatheaded_mayfly%2C_Maccaffertium_sp._%2814008409637%29.jpg',
   },
   {
     id: 'east-green-drake',
@@ -83,6 +89,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Evening',
     description: 'The hatch of the year on Catskill and Pennsylvania limestone streams. Huge flies, huge fish, a short window. The Coffin Fly spinner fall can be spectacular.',
     flies: ['Green Drake Wulff #8–10', 'Coffin Fly Spinner #8–10', 'Green Drake Parachute #10'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Common_burrower_mayfly%2C_Ephemera_guttalata_%286990537564%29.jpg/500px-Common_burrower_mayfly%2C_Ephemera_guttalata_%286990537564%29.jpg',
   },
   {
     id: 'blue-quill',
@@ -95,6 +102,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Midday',
     description: 'Small, dark early-season mayfly that often hatches alongside the Hendrickson. A reliable searching pattern on cool spring days.',
     flies: ['Blue Quill #16–18', 'Dark Hendrickson #16', 'Pheasant Tail Nymph #16'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Pronggilled_mayfly%2C_genus_Paraleptophlebia_%286826303726%29.jpg/500px-Pronggilled_mayfly%2C_genus_Paraleptophlebia_%286826303726%29.jpg',
   },
   {
     id: 'isonychia',
@@ -107,6 +115,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Evening',
     description: 'A large, fast-swimming Eastern mayfly that hatches sporadically throughout summer and fall. September emergence is often the strongest.',
     flies: ['Isonychia Parachute #10–12', 'Slate Drake #10–12', 'Bicolor Nymph #10–12'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Brushlegged_mayfly%2C_Isonychia_bicolor_%286878316556%29.jpg/500px-Brushlegged_mayfly%2C_Isonychia_bicolor_%286878316556%29.jpg',
   },
   {
     id: 'light-cahill',
@@ -119,6 +128,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Evening',
     description: 'Summer evening hatch on freestone streams. The cream-colored wings are easy to spot on the water in low light.',
     flies: ['Light Cahill Dry #14–16', 'Light Cahill Parachute #14–16'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Flatheaded_mayfly%2C_Maccaffertium_sp._%2814194949644%29.jpg/500px-Flatheaded_mayfly%2C_Maccaffertium_sp._%2814194949644%29.jpg',
   },
   {
     id: 'trico',
@@ -131,6 +141,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Early morning (7–10 am)',
     description: 'Tiny midseason mayflies that create massive spinner falls on calm mornings. One of the most technical hatches — fish are sipping and extremely selective.',
     flies: ['Trico Parachute #20–24', 'Trico Spinner #20–22', 'Black & White Trico #22'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Little_stout_crawler_mayfly%2C_genus_Tricorythodes_%289465265969%29.jpg/500px-Little_stout_crawler_mayfly%2C_genus_Tricorythodes_%289465265969%29.jpg',
   },
   {
     id: 'grannom-caddis',
@@ -143,6 +154,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Morning to midday',
     description: 'Prolific spring caddis that often hatches in staggering numbers. Fish frequently take the subsurface emerger or wet fly over the adult.',
     flies: ['Elk Hair Caddis #14–16', 'Grannom Soft Hackle #14', 'X-Caddis #14–16', 'Caddis Pupa #14–16'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Brachycentrus.jpg/500px-Brachycentrus.jpg',
   },
   {
     id: 'pmd',
@@ -155,6 +167,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Morning to early afternoon',
     description: 'The quintessential Western summer hatch. Found on nearly every major tailwater and spring creek from Montana to Colorado.',
     flies: ['PMD Parachute #16–18', 'PMD Cripple #16–18', 'Sparkle Dun #16', 'RS2 #16–18'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Spiny_crawler_mayfly%2C_Ephemerella_subvaria_%2813157650305%29.jpg/500px-Spiny_crawler_mayfly%2C_Ephemerella_subvaria_%2813157650305%29.jpg',
   },
   {
     id: 'west-green-drake',
@@ -167,6 +180,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Afternoon to evening',
     description: 'Explosive hatch on high-elevation Western streams. Brings large trout to the surface in mid-summer on rivers like the Yellowstone and Henry\'s Fork.',
     flies: ['Western Green Drake #10–12', 'Paradrake #10', 'Extended Body Green Drake #10'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Drunella_grandis.jpg/500px-Drunella_grandis.jpg',
   },
   {
     id: 'callibaetis',
@@ -179,6 +193,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Midday',
     description: 'Still-water mayfly found on Western lakes and ponds. Key pattern for lake-dwelling trout cruising shallow flats and weed edges.',
     flies: ['Callibaetis Parachute #14–16', 'Callibaetis Nymph #14–16', 'Adams #14'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Callibaetis_californicus.jpg/500px-Callibaetis_californicus.jpg',
   },
   {
     id: 'salmonfly',
@@ -191,6 +206,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'All day',
     description: 'The Western stonefly event of the year. These massive insects trigger feeding frenzies on big rivers like the Madison, Deschutes, and Gallatin.',
     flies: ['Chernobyl Ant #4–6', 'Sofa Pillow #4–6', 'Bird\'s Stone #6', 'Pat\'s Rubber Legs #6'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Giant_stonefly%2C_Pteronarcys_californica_%287882542754%29.jpg/500px-Giant_stonefly%2C_Pteronarcys_californica_%287882542754%29.jpg',
   },
   {
     id: 'golden-stone',
@@ -203,6 +219,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Morning to midday',
     description: 'Follows the salmonfly migration upriver. Smaller and more abundant — often provides more consistent action than the salmonfly hatch.',
     flies: ['Stimulator #6–8', 'Madam X #6–8', 'Golden Stone #6–8', 'Stonefly Nymph #6–8'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Paraperla_frontalis.jpg/500px-Paraperla_frontalis.jpg',
   },
   {
     id: 'yellow-sally',
@@ -215,6 +232,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Afternoon',
     description: 'Small yellow stonefly found on well-oxygenated streams across the country. A reliable summer searching pattern when nothing else is happening.',
     flies: ['Yellow Stimulator #14–16', 'Yellow Sally #14–16', 'Elk Hair Caddis (yellow) #14'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Isoperla_bilineata.jpg/500px-Isoperla_bilineata.jpg',
   },
   {
     id: 'mahogany-dun',
@@ -227,6 +245,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Afternoon',
     description: 'Late-season hatch that extends the dry fly season deep into fall. Especially productive on tailwaters and spring creeks in the Rocky Mountain West.',
     flies: ['Mahogany Dun #14–16', 'Comparadun (brown) #14–16', 'Pheasant Tail #14–16'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Paraleptophlebia_submarginata_-_Flickr_-_S._Rae.jpg/500px-Paraleptophlebia_submarginata_-_Flickr_-_S._Rae.jpg',
   },
   {
     id: 'october-caddis',
@@ -239,6 +258,7 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Afternoon to evening',
     description: 'Large orange caddis that hatches on Pacific Northwest and Sierra rivers in fall. One of the last big hatches before winter shuts everything down.',
     flies: ['October Caddis #6–10', 'Stimulator (orange) #8–10', 'Elk Hair Caddis (orange) #8–10'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Caddisfly._Limnephilidae_-_Flickr_-_gailhampshire.jpg/500px-Caddisfly._Limnephilidae_-_Flickr_-_gailhampshire.jpg',
   },
   {
     id: 'midge',
@@ -251,5 +271,6 @@ export const HATCHES: Hatch[] = [
     timeOfDay: 'Midday (winter), morning/evening (summer)',
     description: 'Present on every trout stream year-round. Critical during winter months when other insects are absent. Fish can be maddeningly selective during heavy midge emergences.',
     flies: ['Zebra Midge #18–22', 'Griffith\'s Gnat #18–22', 'Midge Cluster #18', 'WD-40 #18–22'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/A_swarm_chironomids_do_nuptial_flighting.jpg/500px-A_swarm_chironomids_do_nuptial_flighting.jpg',
   },
 ];

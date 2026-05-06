@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import type { Hatch } from '@/lib/hatches';
 
 const MONTHS = [
@@ -123,25 +124,39 @@ export default function HatchesClient({ hatches }: { hatches: Hatch[] }) {
                     background: 'var(--surface)',
                     border: `1px solid ${isActive ? 'rgba(52,211,153,0.25)' : 'var(--border)'}`,
                     borderRadius: 'var(--radius-lg)',
-                    padding: '1.25rem',
+                    overflow: 'hidden',
                     position: 'relative',
                   }}
                 >
-                  {isActive && (
-                    <span style={{ position: 'absolute', top: '12px', right: '12px', background: 'var(--green-dim)', color: 'var(--green)', fontSize: '0.6rem', fontWeight: '800', padding: '2px 7px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                      Active
-                    </span>
-                  )}
-
-                  <div style={{ display: 'flex', gap: '5px', marginBottom: '0.75rem', flexWrap: 'wrap', paddingRight: isActive ? '72px' : '0' }}>
-                    <span style={{ fontSize: '0.68rem', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: `${accentColor}18`, color: accentColor }}>
-                      {hatch.type.charAt(0).toUpperCase() + hatch.type.slice(1)}
-                    </span>
-                    <span style={{ fontSize: '0.68rem', fontWeight: '600', padding: '2px 8px', borderRadius: '20px', background: 'var(--surface-2)', color: 'var(--text-2)' }}>
-                      {REGION_LABELS[hatch.region]}
-                    </span>
+                  {/* Card image */}
+                  <div style={{ position: 'relative', height: '160px', background: 'var(--surface-2)', overflow: 'hidden' }}>
+                    {hatch.image && (
+                      <Image
+                        src={hatch.image}
+                        alt={hatch.name}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 360px"
+                        style={{ objectFit: 'cover', objectPosition: 'center' }}
+                        unoptimized
+                      />
+                    )}
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(12,20,16,0.85) 0%, rgba(12,20,16,0.1) 60%, transparent 100%)' }} />
+                    {isActive && (
+                      <span style={{ position: 'absolute', top: '10px', right: '10px', background: 'var(--green)', color: '#0c1410', fontSize: '0.6rem', fontWeight: '800', padding: '2px 8px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        Active
+                      </span>
+                    )}
+                    <div style={{ position: 'absolute', bottom: '10px', left: '12px', display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: `${accentColor}30`, color: accentColor, backdropFilter: 'blur(8px)' }}>
+                        {hatch.type.charAt(0).toUpperCase() + hatch.type.slice(1)}
+                      </span>
+                      <span style={{ fontSize: '0.68rem', fontWeight: '600', padding: '2px 8px', borderRadius: '20px', background: 'rgba(12,20,16,0.5)', color: 'var(--text-2)', backdropFilter: 'blur(8px)' }}>
+                        {REGION_LABELS[hatch.region]}
+                      </span>
+                    </div>
                   </div>
 
+                  <div style={{ padding: '1rem 1.25rem 1.25rem' }}>
                   <h2 style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text)', margin: '0 0 2px' }}>{hatch.name}</h2>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontStyle: 'italic', margin: '0 0 0.75rem' }}>{hatch.latinName}</p>
                   <p style={{ fontSize: '0.82rem', color: 'var(--text-2)', lineHeight: '1.65', margin: '0 0 0.75rem' }}>{hatch.description}</p>
@@ -178,6 +193,7 @@ export default function HatchesClient({ hatches }: { hatches: Hatch[] }) {
                         </span>
                       ))}
                     </div>
+                  </div>
                   </div>
                 </div>
               );
