@@ -57,9 +57,9 @@ export default function NavBar() {
     }}>
 
       {/* Logo */}
-      <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'baseline', gap: '1px', lineHeight: 1 }}>
-        <span style={{ fontSize: '1.15rem', fontWeight: '700', color: 'var(--text)', letterSpacing: '-0.03em' }}>Drift</span>
-        <span style={{ fontSize: '1.15rem', fontWeight: '700', color: 'var(--amber)', letterSpacing: '-0.03em' }}>Line</span>
+      <Link href="/" style={{ textDecoration: 'none', lineHeight: 1 }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: '700', fontStyle: 'italic', color: 'var(--text)', letterSpacing: '-0.01em' }}>Drift</span>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: '600', fontStyle: 'normal', color: 'var(--green)', letterSpacing: '-0.01em' }}>Line</span>
       </Link>
 
       {/* Desktop nav */}
