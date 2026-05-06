@@ -211,7 +211,7 @@ export default async function HomePage() {
           </h2>
           <p style={{ color: 'var(--text-2)', fontSize: '0.95rem' }}>Free forever. No paywalls.</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1px', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
           {FEATURES.map((f) => (
             <Link key={f.title} href={f.href} style={{ textDecoration: 'none', display: 'block', background: 'var(--surface)', padding: '1.5rem', transition: 'background 0.15s' }}>
               <p style={{ fontSize: '1.4rem', marginBottom: '0.75rem', opacity: 0.5 }}>{f.icon}</p>
