@@ -24,9 +24,15 @@ export async function GET(request: Request) {
     errors.push(`ny: ${e.message}`);
   }
 
-  // ── PA: PFBC ArcGIS API ────────────────────────────────────────────────────
+  // ── PA: PFBC ArcGIS API + per-waterway stocking dates ────────────────────
   try {
     const paRecords = await fetchPA();
+    const year = new Date().getFullYear();
+    // Delete existing PA records for this year first — dates may have changed
+    await supabase.from('stocking_reports').delete()
+      .eq('state', 'pa')
+      .gte('stocked_date', `${year}-01-01`)
+      .lte('stocked_date', `${year}-12-31`);
     await upsert(supabase, paRecords);
     results.pa = paRecords.length;
   } catch (e: any) {
@@ -114,7 +120,7 @@ const PA_SPECIES = [
 
 async function fetchPA() {
   const year = new Date().getFullYear();
-  const fields = ['WtrName', 'StockingYear', ...PA_SPECIES.map(s => s.field)].join(',');
+  const fields = ['WtrName', 'StockingYear', 'RFP_WaterID', ...PA_SPECIES.map(s => s.field)].join(',');
   const base = `https://fbweb.pa.gov/arcgis/rest/services/PFBC_Map_Services/TroutStockedSections_${year}/MapServer/0/query`;
 
   const all: any[] = [];
@@ -130,24 +136,70 @@ async function fetchPA() {
     if (!body.exceededTransferLimit) break;
   }
 
-  // Aggregate quantities across multiple sections with same river name
-  const agg = new Map<string, number>();
+  // Aggregate quantities by (rfpId, species)
+  const agg = new Map<string, { river: string; qty: number }>();
   for (const { attributes: a } of all) {
     const river = a.WtrName?.trim();
-    const yr = a.StockingYear ?? year;
-    if (!river) continue;
+    const rfpId: number = a.RFP_WaterID;
+    if (!river || !rfpId) continue;
     for (const { field, name } of PA_SPECIES) {
       const qty: number = a[field] ?? 0;
       if (qty <= 0) continue;
-      const key = `${river}|${name}|${yr}`;
-      agg.set(key, (agg.get(key) ?? 0) + qty);
+      const key = `${rfpId}|${name}`;
+      const cur = agg.get(key);
+      agg.set(key, { river, qty: (cur?.qty ?? 0) + qty });
     }
   }
 
-  return Array.from(agg.entries()).map(([key, qty]) => {
-    const [river, species, yr] = key.split('|');
-    return { river_name: river, state: 'pa', species, quantity: qty, stocked_date: `${yr}-04-01` };
+  // Fetch actual stocking dates from PFBC waterway pages
+  const rfpIds = [...new Set(Array.from(agg.keys()).map(k => Number(k.split('|')[0])))];
+  const dateMap = await fetchPADates(rfpIds, year);
+
+  return Array.from(agg.entries()).map(([key, { river, qty }]) => {
+    const [rfpId, species] = key.split('|');
+    const date = dateMap.get(Number(rfpId)) ?? `${year}-04-01`;
+    return { river_name: river, state: 'pa', species, quantity: qty, stocked_date: date };
   });
+}
+
+async function fetchPADates(rfpIds: number[], year: number): Promise<Map<number, string>> {
+  const dateMap = new Map<number, string>();
+  const today = new Date();
+  const CONCURRENCY = 15;
+
+  for (let i = 0; i < rfpIds.length; i += CONCURRENCY) {
+    const batch = rfpIds.slice(i, i + CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.map(async (id) => {
+        const res = await fetch(
+          `https://fbweb.pa.gov/stocking/TroutStocking_ATW_GIS_RFP.aspx?RFP_WaterID=${id}`,
+          { signal: AbortSignal.timeout(8000) }
+        );
+        if (!res.ok) return null;
+        const html = await res.text();
+        return pickPADate(html, year, today);
+      })
+    );
+    results.forEach((r, j) => {
+      if (r.status === 'fulfilled' && r.value) dateMap.set(batch[j], r.value);
+    });
+  }
+  return dateMap;
+}
+
+function pickPADate(html: string, year: number, today: Date): string | null {
+  const pattern = /\b(\d{2})\/(\d{2})\/(\d{2})\b/g;
+  const dates: Date[] = [];
+  let m;
+  while ((m = pattern.exec(html)) !== null) {
+    const fullYear = 2000 + Number(m[3]);
+    if (fullYear === year) dates.push(new Date(fullYear, Number(m[1]) - 1, Number(m[2])));
+  }
+  if (!dates.length) return null;
+  dates.sort((a, b) => a.getTime() - b.getTime());
+  const upcoming = dates.filter(d => d >= today);
+  const chosen = upcoming.length ? upcoming[0] : dates[dates.length - 1];
+  return chosen.toISOString().split('T')[0];
 }
 
 // ── CT helpers ────────────────────────────────────────────────────────────────
