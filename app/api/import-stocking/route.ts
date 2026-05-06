@@ -33,10 +33,10 @@ export async function GET(request: Request) {
     errors.push(`pa: ${e.message}`);
   }
 
-  // ── CT: CT DEEP ArcGIS Feature Service ────────────────────────────────────
+  // ── CT: CT DEEP ArcGIS Feature Service — overwrites to pick up daily date changes
   try {
     const ctRecords = await fetchCT();
-    await upsert(supabase, ctRecords);
+    await upsert(supabase, ctRecords, true);
     results.ct = ctRecords.length;
   } catch (e: any) {
     errors.push(`ct: ${e.message}`);
@@ -45,12 +45,12 @@ export async function GET(request: Request) {
   return Response.json({ results, errors: errors.length ? errors : undefined });
 }
 
-async function upsert(supabase: any, records: any[]) {
+async function upsert(supabase: any, records: any[], overwrite = false) {
   const BATCH = 500;
   for (let i = 0; i < records.length; i += BATCH) {
     const { error } = await supabase
       .from('stocking_reports')
-      .upsert(records.slice(i, i + BATCH), { onConflict: 'river_name,stocked_date,species,state', ignoreDuplicates: true });
+      .upsert(records.slice(i, i + BATCH), { onConflict: 'river_name,stocked_date,species,state', ignoreDuplicates: !overwrite });
     if (error) throw new Error(error.message);
   }
 }
