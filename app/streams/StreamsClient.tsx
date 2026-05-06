@@ -25,10 +25,10 @@ const STATES: { code: string; label: string }[] = [
 ];
 
 function getCondition(flow: number) {
-  if (flow > 1000) return { label: 'High', color: '#DC2626', bg: '#FEE2E2' };
-  if (flow > 200) return { label: 'Good', color: '#16A34A', bg: '#DCFCE7' };
-  if (flow > 50) return { label: 'Fair', color: '#D97706', bg: '#FEF3C7' };
-  return { label: 'Low', color: '#9CA3AF', bg: '#F3F4F6' };
+  if (flow > 1000) return { label: 'High', color: 'var(--red)',    bg: 'var(--red-dim)'   };
+  if (flow > 200)  return { label: 'Good', color: 'var(--green)',  bg: 'var(--green-dim)' };
+  if (flow > 50)   return { label: 'Fair', color: 'var(--amber)',  bg: 'var(--amber-dim)' };
+  return            { label: 'Low',  color: 'var(--slate)',  bg: 'var(--slate-dim)' };
 }
 
 function celsiusToF(c: number) {
@@ -39,6 +39,17 @@ function titleCase(str: string) {
   return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 }
 
+const SELECT_STYLE: React.CSSProperties = {
+  padding: '0.55rem 0.9rem',
+  borderRadius: '8px',
+  border: '1px solid var(--border)',
+  fontSize: '0.85rem',
+  background: 'var(--surface)',
+  color: 'var(--text)',
+  cursor: 'pointer',
+  outline: 'none',
+};
+
 export default function StreamsClient({ rivers, currentState, usgsDown }: { rivers: any[]; currentState: string; usgsDown?: boolean }) {
   const router = useRouter();
   const [search, setSearch] = useState('');
@@ -47,40 +58,28 @@ export default function StreamsClient({ rivers, currentState, usgsDown }: { rive
 
   const stateName = STATES.find(s => s.code === currentState)?.label ?? currentState.toUpperCase();
 
-  let filtered = rivers.filter(r =>
-    r.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  if (conditionFilter) {
-    filtered = filtered.filter(r => getCondition(r.flow).label === conditionFilter);
-  }
-
+  let filtered = rivers.filter(r => r.name.toLowerCase().includes(search.toLowerCase()));
+  if (conditionFilter) filtered = filtered.filter(r => getCondition(r.flow).label === conditionFilter);
   if (sort === 'flow-high') filtered.sort((a, b) => b.flow - a.flow);
-  if (sort === 'flow-low') filtered.sort((a, b) => a.flow - b.flow);
-  if (sort === 'name') filtered.sort((a, b) => a.name.localeCompare(b.name));
+  if (sort === 'flow-low')  filtered.sort((a, b) => a.flow - b.flow);
+  if (sort === 'name')      filtered.sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <main style={{ minHeight: '100vh', background: '#f8faf9', padding: '2rem' }}>
-      <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <main style={{ minHeight: '100vh', background: 'var(--bg)', padding: '2rem 1.5rem' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
 
-        <div style={{ marginBottom: '1.5rem' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: '700', color: '#085041', marginBottom: '4px' }}>
+        <div style={{ marginBottom: '2rem' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: '4px' }}>
             Stream Conditions
           </h1>
-          <p style={{ color: '#6B7280', fontSize: '0.95rem' }}>
-            Live USGS data · {stateName} · {rivers.length} rivers with flow data
+          <p style={{ color: 'var(--text-2)', fontSize: '0.875rem' }}>
+            Live USGS data · {stateName} · {rivers.length} rivers
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-          <select
-            value={currentState}
-            onChange={e => router.push(`/streams?state=${e.target.value}`)}
-            style={{ padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '0.9rem', background: '#fff', cursor: 'pointer', color: '#111827', fontWeight: '500' }}
-          >
-            {STATES.map(s => (
-              <option key={s.code} value={s.code}>{s.label}</option>
-            ))}
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          <select value={currentState} onChange={e => router.push(`/streams?state=${e.target.value}`)} style={SELECT_STYLE}>
+            {STATES.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
           </select>
 
           <input
@@ -88,23 +87,17 @@ export default function StreamsClient({ rivers, currentState, usgsDown }: { rive
             placeholder="Search rivers..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ flex: 1, minWidth: '200px', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '0.9rem', outline: 'none', color: '#111827' }}
+            style={{ ...SELECT_STYLE, flex: 1, minWidth: '180px', cursor: 'text' }}
           />
-          <select
-            value={sort}
-            onChange={e => setSort(e.target.value)}
-            style={{ padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '0.9rem', background: '#fff', cursor: 'pointer', color: '#111827' }}
-          >
+
+          <select value={sort} onChange={e => setSort(e.target.value)} style={SELECT_STYLE}>
             <option value="">Sort by...</option>
-            <option value="flow-high">Flow: High to Low</option>
-            <option value="flow-low">Flow: Low to High</option>
+            <option value="flow-high">Flow: High → Low</option>
+            <option value="flow-low">Flow: Low → High</option>
             <option value="name">Name A–Z</option>
           </select>
-          <select
-            value={conditionFilter}
-            onChange={e => setConditionFilter(e.target.value)}
-            style={{ padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '0.9rem', background: '#fff', cursor: 'pointer', color: '#111827' }}
-          >
+
+          <select value={conditionFilter} onChange={e => setConditionFilter(e.target.value)} style={SELECT_STYLE}>
             <option value="">All conditions</option>
             <option value="Good">Good</option>
             <option value="Fair">Fair</option>
@@ -114,57 +107,66 @@ export default function StreamsClient({ rivers, currentState, usgsDown }: { rive
         </div>
 
         {usgsDown && (
-          <div style={{ background: '#FEF3C7', border: '1px solid #D97706', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', color: '#92400E', fontSize: '0.875rem' }}>
+          <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber)', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', color: 'var(--amber)', fontSize: '0.85rem' }}>
             USGS data is temporarily unavailable. Try refreshing in a few minutes.
           </div>
         )}
 
-        <p style={{ fontSize: '0.85rem', color: '#9CA3AF', marginBottom: '1rem' }}>
-          Showing {filtered.length} of {rivers.length} rivers
+        <p style={{ fontSize: '0.78rem', color: 'var(--text-3)', marginBottom: '1rem' }}>
+          {filtered.length} of {rivers.length} rivers
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem' }}>
           {filtered.map((river: any) => {
             const condition = getCondition(river.flow);
             return (
               <Link key={river.id} href={`/river/${currentState}-${river.id}`} style={{ textDecoration: 'none' }}>
-              <div style={{ background: '#ffffff', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '1.25rem', cursor: 'pointer', transition: 'border-color 0.15s', height: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <h2 style={{ fontSize: '0.88rem', fontWeight: '600', color: '#111827', lineHeight: '1.4', flex: 1, marginRight: '8px' }}>
-                    {titleCase(river.name)}
-                  </h2>
-                  <span style={{ fontSize: '0.7rem', fontWeight: '600', padding: '2px 8px', borderRadius: '20px', background: condition.bg, color: condition.color, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    {condition.label}
-                  </span>
-                </div>
-
-                <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '0.75rem', display: 'flex', gap: '1.5rem' }}>
-                  <div>
-                    <p style={{ fontSize: '1.4rem', fontWeight: '700', color: '#085041' }}>
-                      {river.flow.toLocaleString()}
-                      <span style={{ fontSize: '0.75rem', fontWeight: '400', color: '#9CA3AF', marginLeft: '3px' }}>ft³/s</span>
-                    </p>
-                    <p style={{ fontSize: '0.72rem', color: '#9CA3AF' }}>Flow</p>
+                <div style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '1.1rem 1.25rem',
+                  cursor: 'pointer',
+                  height: '100%',
+                  transition: 'border-color 0.15s',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                    <h2 style={{ fontSize: '0.83rem', fontWeight: '600', color: 'var(--text)', lineHeight: '1.4', flex: 1, marginRight: '8px' }}>
+                      {titleCase(river.name)}
+                    </h2>
+                    <span style={{ fontSize: '0.68rem', fontWeight: '700', padding: '2px 8px', borderRadius: '20px', background: condition.bg, color: condition.color, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {condition.label}
+                    </span>
                   </div>
-                  {river.temp !== null && (
+
+                  <div style={{ display: 'flex', gap: '1.5rem' }}>
                     <div>
-                      <p style={{ fontSize: '1.4rem', fontWeight: '700', color: '#085041' }}>
-                        {celsiusToF(river.temp)}
-                        <span style={{ fontSize: '0.75rem', fontWeight: '400', color: '#9CA3AF', marginLeft: '3px' }}>°F</span>
+                      <p style={{ fontSize: '1.35rem', fontWeight: '700', color: 'var(--text)', lineHeight: 1 }}>
+                        {river.flow.toLocaleString()}
+                        <span style={{ fontSize: '0.7rem', fontWeight: '400', color: 'var(--text-3)', marginLeft: '3px' }}>cfs</span>
                       </p>
-                      <p style={{ fontSize: '0.72rem', color: '#9CA3AF' }}>Water temp</p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '2px' }}>Flow</p>
                     </div>
+                    {river.temp !== null && (
+                      <div>
+                        <p style={{ fontSize: '1.35rem', fontWeight: '700', color: 'var(--text)', lineHeight: 1 }}>
+                          {celsiusToF(river.temp)}
+                          <span style={{ fontSize: '0.7rem', fontWeight: '400', color: 'var(--text-3)', marginLeft: '2px' }}>°F</span>
+                        </p>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '2px' }}>Temp</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {river.updated && (
+                    <p style={{ fontSize: '0.67rem', color: 'var(--text-3)', marginTop: '8px' }}>Updated {river.updated}</p>
                   )}
                 </div>
-
-                {river.updated && (
-                  <p style={{ fontSize: '0.7rem', color: '#D1D5DB', marginTop: '8px' }}>Updated {river.updated}</p>
-                )}
-              </div>
               </Link>
             );
           })}
         </div>
+
       </div>
     </main>
   );

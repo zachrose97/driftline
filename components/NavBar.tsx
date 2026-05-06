@@ -5,8 +5,17 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
+const NAV_LINKS = [
+  { href: '/streams',  label: 'Conditions' },
+  { href: '/hatches',  label: 'Hatches'    },
+  { href: '/stocking', label: 'Stocking'   },
+  { href: '/map',      label: 'Map'        },
+  { href: '/logbook',  label: 'Logbook'    },
+];
+
 export default function NavBar() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -14,13 +23,13 @@ export default function NavBar() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserEmail(session?.user?.email ?? null);
     });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserEmail(session?.user?.email ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      setUserEmail(s?.user?.email ?? null);
     });
-
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -28,70 +37,91 @@ export default function NavBar() {
     router.refresh();
   }
 
-  const linkStyle = (href: string): React.CSSProperties => ({
-    color: pathname === href ? '#085041' : '#6B7280',
-    textDecoration: 'none',
-    fontSize: '0.9rem',
-    fontWeight: pathname === href ? '600' : '400',
-  });
+  const isActive = (href: string) =>
+    pathname === href || (href !== '/' && pathname.startsWith(href));
 
   return (
     <nav style={{
-      background: '#ffffff',
-      borderBottom: '1px solid #E5E7EB',
-      padding: '1rem 2rem',
+      position: 'sticky',
+      top: 0,
+      zIndex: 100,
+      height: '56px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      flexWrap: 'wrap',
-      gap: '0.75rem',
-      position: 'sticky',
-      top: 0,
-      zIndex: 50,
+      padding: '0 1.5rem',
+      background: 'rgba(12, 20, 16, 0.88)',
+      backdropFilter: 'blur(14px)',
+      WebkitBackdropFilter: 'blur(14px)',
+      borderBottom: '1px solid var(--border)',
     }}>
-      <Link href="/" style={{ fontSize: '1.4rem', fontWeight: '700', color: '#085041', textDecoration: 'none' }}>
-        Drift<span style={{ color: '#D97706' }}>Line</span>
+
+      {/* Logo */}
+      <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'baseline', gap: '1px', lineHeight: 1 }}>
+        <span style={{ fontSize: '1.15rem', fontWeight: '700', color: 'var(--text)', letterSpacing: '-0.03em' }}>Drift</span>
+        <span style={{ fontSize: '1.15rem', fontWeight: '700', color: 'var(--amber)', letterSpacing: '-0.03em' }}>Line</span>
       </Link>
 
-      <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <Link href="/streams" style={linkStyle('/streams')}>Conditions</Link>
-        <Link href="/hatches" style={linkStyle('/hatches')}>Hatches</Link>
-        <Link href="/reports" style={linkStyle('/reports')}>Reports</Link>
-        <Link href="/stocking" style={linkStyle('/stocking')}>Stocking</Link>
-        <Link href="/map" style={linkStyle('/map')}>Map</Link>
-        <Link href="/logbook" style={linkStyle('/logbook')}>Logbook</Link>
+      {/* Desktop nav */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+        {NAV_LINKS.map(({ href, label }) => (
+          <Link
+            key={href}
+            href={href}
+            style={{
+              padding: '0.4rem 0.75rem',
+              borderRadius: '6px',
+              fontSize: '0.875rem',
+              fontWeight: isActive(href) ? '500' : '400',
+              color: isActive(href) ? 'var(--text)' : 'var(--text-2)',
+              textDecoration: 'none',
+              background: isActive(href) ? 'var(--surface-2)' : 'transparent',
+              transition: 'color 0.15s, background 0.15s',
+            }}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
 
+      {/* Auth */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         {userEmail ? (
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <Link href="/account" style={{ fontSize: '0.8rem', color: '#6B7280', textDecoration: 'none' }}>
+          <>
+            <Link
+              href="/account"
+              style={{ fontSize: '0.8rem', color: 'var(--text-3)', textDecoration: 'none', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            >
               {userEmail}
             </Link>
             <button
               onClick={handleLogout}
               style={{
                 background: 'transparent',
-                color: '#6B7280',
-                border: '1px solid #D1D5DB',
-                padding: '0.4rem 0.9rem',
+                color: 'var(--text-2)',
+                border: '1px solid var(--border)',
+                padding: '0.35rem 0.85rem',
                 borderRadius: '6px',
-                fontSize: '0.85rem',
+                fontSize: '0.8rem',
                 cursor: 'pointer',
+                transition: 'border-color 0.15s, color 0.15s',
               }}
             >
               Log out
             </button>
-          </div>
+          </>
         ) : (
           <Link
             href="/login"
             style={{
-              background: '#085041',
-              color: '#fff',
+              background: 'var(--green)',
+              color: '#0c1410',
               padding: '0.4rem 1rem',
               borderRadius: '6px',
               textDecoration: 'none',
               fontSize: '0.85rem',
               fontWeight: '600',
+              letterSpacing: '-0.01em',
             }}
           >
             Log in

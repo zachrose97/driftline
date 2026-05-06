@@ -13,7 +13,6 @@ const STATE_NAMES: Record<string, string> = {
 
 const VALID_STATES = new Set(Object.keys(STATE_NAMES));
 
-// "HOUSATONIC R AT FALLS VILLAGE CT" → "Housatonic River"
 function extractRiverName(usgsName: string): string {
   const trimmed = usgsName
     .replace(/\s+(AT|NEAR|NR|ABV|BLW|BLWM)\s+.+$/i, '')
@@ -29,10 +28,10 @@ function extractRiverName(usgsName: string): string {
 }
 
 function getCondition(flow: number) {
-  if (flow > 1000) return { label: 'High', color: '#DC2626', bg: '#FEE2E2' };
-  if (flow > 200)  return { label: 'Good', color: '#16A34A', bg: '#DCFCE7' };
-  if (flow > 50)   return { label: 'Fair', color: '#D97706', bg: '#FEF3C7' };
-  return            { label: 'Low',  color: '#9CA3AF', bg: '#F3F4F6' };
+  if (flow > 1000) return { label: 'High', color: 'var(--red)',   bg: 'var(--red-dim)'   };
+  if (flow > 200)  return { label: 'Good', color: 'var(--green)', bg: 'var(--green-dim)' };
+  if (flow > 50)   return { label: 'Fair', color: 'var(--amber)', bg: 'var(--amber-dim)' };
+  return            { label: 'Low',  color: 'var(--slate)', bg: 'var(--slate-dim)' };
 }
 
 function celsiusToF(c: number) {
@@ -54,13 +53,13 @@ function daysAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-const SPECIES_COLORS: Record<string, { bg: string; color: string }> = {
-  'Brown Trout':     { bg: '#FEF3C7', color: '#92400E' },
-  'Rainbow Trout':   { bg: '#DBEAFE', color: '#1E40AF' },
-  'Brook Trout':     { bg: '#DCFCE7', color: '#166534' },
-  'Cutthroat Trout': { bg: '#F3E8FF', color: '#6B21A8' },
-  'Lake Trout':      { bg: '#E0F2FE', color: '#075985' },
-  'Tiger Trout':     { bg: '#FEE2E2', color: '#991B1B' },
+const SPECIES_COLOR: Record<string, string> = {
+  'Brown Trout':     'var(--amber)',
+  'Rainbow Trout':   '#60a5fa',
+  'Brook Trout':     'var(--green)',
+  'Cutthroat Trout': '#a78bfa',
+  'Lake Trout':      '#38bdf8',
+  'Tiger Trout':     'var(--orange)',
 };
 
 async function fetchUSGS(siteId: string) {
@@ -88,18 +87,13 @@ async function fetchUSGS(siteId: string) {
       if (desc.includes('Temperature') && !isNaN(raw)) temp = raw;
       if (dt && !updated) updated = new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
-
     return name ? { name, flow, temp, updated } : null;
   } catch {
     return null;
   }
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const dashIdx = slug.indexOf('-');
   if (dashIdx === -1) return { title: 'River — DriftLine' };
@@ -108,22 +102,17 @@ export async function generateMetadata({
   const stateName = STATE_NAMES[state] ?? state.toUpperCase();
   return {
     title: `USGS ${siteId} · ${stateName} — DriftLine`,
-    description: `Live flow, water temperature, stocking history, and fishing access points for USGS gauge ${siteId} in ${stateName}.`,
+    description: `Live flow, temperature, stocking history, and fishing access for USGS gauge ${siteId} in ${stateName}.`,
   };
 }
 
-export default async function RiverPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function RiverPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const dashIdx = slug.indexOf('-');
   if (dashIdx === -1) notFound();
 
   const state = slug.slice(0, dashIdx);
   const siteId = slug.slice(dashIdx + 1);
-
   if (!VALID_STATES.has(state) || !/^\d+$/.test(siteId)) notFound();
 
   const usgs = await fetchUSGS(siteId);
@@ -133,12 +122,7 @@ export default async function RiverPage({
   const stateName = STATE_NAMES[state];
   const cond = usgs.flow != null ? getCondition(usgs.flow) : null;
 
-  // Two separate ilike queries — avoids PostgREST or() wildcard ambiguity
-  const [
-    { data: stockingReports },
-    { data: accessByWater },
-    { data: accessByName },
-  ] = await Promise.all([
+  const [{ data: stockingReports }, { data: accessByWater }, { data: accessByName }] = await Promise.all([
     supabase
       .from('stocking_reports')
       .select('id,river_name,species,quantity,stocked_date')
@@ -160,7 +144,6 @@ export default async function RiverPage({
       .limit(100),
   ]);
 
-  // Merge access points, deduplicate by id
   const seen = new Set<number>();
   const accessPoints = [...(accessByWater ?? []), ...(accessByName ?? [])].filter(p => {
     if (seen.has(p.id)) return false;
@@ -168,59 +151,65 @@ export default async function RiverPage({
     return true;
   });
 
+  const SECTION_LABEL: React.CSSProperties = {
+    fontSize: '0.65rem',
+    fontWeight: '800',
+    color: 'var(--text-3)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.12em',
+    margin: '0 0 0.85rem',
+  };
+
   return (
-    <main style={{ minHeight: '100vh', background: '#f8faf9', padding: '2rem' }}>
+    <main style={{ minHeight: '100vh', background: 'var(--bg)', padding: '2rem 1.5rem' }}>
       <div style={{ maxWidth: '860px', margin: '0 auto' }}>
 
-        <Link
-          href={`/streams?state=${state}`}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', color: '#6B7280', marginBottom: '1.5rem', textDecoration: 'none' }}
-        >
+        <Link href={`/streams?state=${state}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '1.5rem', textDecoration: 'none' }}>
           ← Stream Conditions
         </Link>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
           <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: '700', color: '#085041', margin: '0 0 4px' }}>
+            <h1 style={{ fontSize: '2.25rem', fontWeight: '800', color: 'var(--text)', letterSpacing: '-0.04em', margin: '0 0 4px' }}>
               {riverName}
             </h1>
-            <p style={{ color: '#6B7280', fontSize: '0.9rem', margin: 0 }}>
+            <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', margin: 0 }}>
               {stateName} · USGS #{siteId}
             </p>
           </div>
           {cond && (
-            <span style={{ fontSize: '0.85rem', fontWeight: '700', padding: '5px 16px', borderRadius: '20px', background: cond.bg, color: cond.color, alignSelf: 'center', flexShrink: 0 }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: '700', padding: '5px 14px', borderRadius: '20px', background: cond.bg, color: cond.color, alignSelf: 'center', flexShrink: 0, letterSpacing: '0.02em' }}>
               {cond.label}
             </span>
           )}
         </div>
 
-        {/* Live conditions card */}
-        <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' }}>
-          <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 1rem' }}>
-            Live Conditions
-          </p>
+        {/* Live conditions */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', marginBottom: '1.5rem' }}>
+          <p style={SECTION_LABEL}>Live Conditions</p>
           <div style={{ display: 'flex', gap: '2.5rem', flexWrap: 'wrap' }}>
             <div>
-              <p style={{ fontSize: '2.2rem', fontWeight: '700', color: usgs.flow != null ? '#085041' : '#D1D5DB', margin: '0', lineHeight: 1 }}>
+              <p style={{ fontSize: '2.5rem', fontWeight: '800', color: usgs.flow != null ? 'var(--text)' : 'var(--text-3)', margin: 0, lineHeight: 1, letterSpacing: '-0.04em' }}>
                 {usgs.flow != null ? usgs.flow.toLocaleString() : '—'}
-                {usgs.flow != null && <span style={{ fontSize: '0.85rem', fontWeight: '400', color: '#9CA3AF', marginLeft: '4px' }}>cfs</span>}
+                {usgs.flow != null && <span style={{ fontSize: '0.9rem', fontWeight: '400', color: 'var(--text-3)', marginLeft: '5px' }}>cfs</span>}
               </p>
-              <p style={{ fontSize: '0.78rem', color: '#9CA3AF', margin: '4px 0 0' }}>{usgs.flow != null ? 'Flow' : 'Flow unavailable'}</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', margin: '5px 0 0' }}>
+                {usgs.flow != null ? 'Flow' : 'Flow unavailable'}
+              </p>
             </div>
             {usgs.temp != null && (
               <div>
-                <p style={{ fontSize: '2.2rem', fontWeight: '700', color: '#085041', margin: '0', lineHeight: 1 }}>
+                <p style={{ fontSize: '2.5rem', fontWeight: '800', color: 'var(--text)', margin: 0, lineHeight: 1, letterSpacing: '-0.04em' }}>
                   {celsiusToF(usgs.temp)}
-                  <span style={{ fontSize: '0.85rem', fontWeight: '400', color: '#9CA3AF', marginLeft: '2px' }}>°F</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: '400', color: 'var(--text-3)', marginLeft: '3px' }}>°F</span>
                 </p>
-                <p style={{ fontSize: '0.78rem', color: '#9CA3AF', margin: '4px 0 0' }}>Water temp</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', margin: '5px 0 0' }}>Water temp</p>
               </div>
             )}
           </div>
           {usgs.updated && (
-            <p style={{ fontSize: '0.72rem', color: '#D1D5DB', margin: '1rem 0 0' }}>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: '1rem 0 0' }}>
               Updated {usgs.updated} · USGS real-time data
             </p>
           )}
@@ -228,73 +217,56 @@ export default async function RiverPage({
 
         {/* Stocking history */}
         <section style={{ marginBottom: '1.5rem' }}>
-          <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.75rem' }}>
+          <p style={SECTION_LABEL}>
             Stocking History{stockingReports?.length ? ` · ${stockingReports.length} records` : ''}
           </p>
           {!stockingReports?.length ? (
-            <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '1.5rem', color: '#9CA3AF', fontSize: '0.9rem', textAlign: 'center' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', color: 'var(--text-3)', fontSize: '0.875rem', textAlign: 'center' }}>
               No stocking records found for this river
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {stockingReports.map((r: any) => {
-                const sc = SPECIES_COLORS[r.species] ?? { bg: '#F3F4F6', color: '#374151' };
-                return (
-                  <div
-                    key={r.id}
-                    style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '0.9rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}
-                  >
-                    <p style={{ fontWeight: '600', color: '#111827', fontSize: '0.9rem', margin: 0 }}>{r.river_name}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: sc.bg, color: sc.color }}>
-                        {r.species}
-                      </span>
-                      {r.quantity && (
-                        <span style={{ fontSize: '0.85rem', color: '#374151' }}>{r.quantity.toLocaleString()} fish</span>
-                      )}
-                      <span style={{ fontSize: '0.8rem', color: '#9CA3AF' }}>{daysAgo(r.stocked_date)}</span>
-                    </div>
+              {stockingReports.map((r: any) => (
+                <div key={r.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '0.9rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <p style={{ fontWeight: '600', color: 'var(--text)', fontSize: '0.875rem', margin: 0 }}>{r.river_name}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: '700', color: SPECIES_COLOR[r.species] ?? 'var(--text-2)' }}>
+                      {r.species}
+                    </span>
+                    {r.quantity && (
+                      <span style={{ fontSize: '0.83rem', color: 'var(--text-2)' }}>{r.quantity.toLocaleString()} fish</span>
+                    )}
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-3)' }}>{daysAgo(r.stocked_date)}</span>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </section>
 
         {/* Access points */}
         <section>
-          <p style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.75rem' }}>
+          <p style={SECTION_LABEL}>
             Access Points{accessPoints.length ? ` · ${accessPoints.length}` : ''}
           </p>
           {!accessPoints.length ? (
-            <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '1.5rem', color: '#9CA3AF', fontSize: '0.9rem', textAlign: 'center' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', color: 'var(--text-3)', fontSize: '0.875rem', textAlign: 'center' }}>
               No access points found for this river
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.75rem' }}>
               {accessPoints.map((p: any) => (
-                <div key={p.id} style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '1rem 1.25rem' }}>
-                  <p style={{ fontWeight: '600', color: '#111827', fontSize: '0.88rem', margin: '0 0 3px' }}>{p.name}</p>
-                  {p.access_type && (
-                    <p style={{ fontSize: '0.78rem', color: '#6B7280', margin: '0 0 6px' }}>{p.access_type}</p>
-                  )}
+                <div key={p.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem 1.25rem' }}>
+                  <p style={{ fontWeight: '600', color: 'var(--text)', fontSize: '0.85rem', margin: '0 0 3px' }}>{p.name}</p>
+                  {p.access_type && <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', margin: '0 0 6px' }}>{p.access_type}</p>}
                   <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    {p.parking && <span style={{ fontSize: '0.72rem', color: '#6B7280' }}>Parking: {p.parking}</span>}
-                    {p.ada === 'Accessible' && (
-                      <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#166534' }}>ADA</span>
-                    )}
-                    {p.fee && <span style={{ fontSize: '0.72rem', color: '#6B7280' }}>Fee: {p.fee}</span>}
+                    {p.parking && <span style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>P: {p.parking}</span>}
+                    {p.ada === 'Accessible' && <span style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--green)' }}>ADA</span>}
+                    {p.fee && <span style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>Fee: {p.fee}</span>}
                   </div>
-                  {p.notes && (
-                    <p style={{ fontSize: '0.72rem', color: '#9CA3AF', margin: '4px 0 0' }}>{p.notes}</p>
-                  )}
+                  {p.notes && <p style={{ fontSize: '0.7rem', color: 'var(--text-3)', margin: '4px 0 0' }}>{p.notes}</p>}
                   {p.detail_url && (
-                    <a
-                      href={p.detail_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ fontSize: '0.75rem', color: '#085041', textDecoration: 'none', display: 'inline-block', marginTop: '6px' }}
-                    >
+                    <a href={p.detail_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: 'var(--green)', textDecoration: 'none', display: 'inline-block', marginTop: '6px' }}>
                       More info →
                     </a>
                   )}

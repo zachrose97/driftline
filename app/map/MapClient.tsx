@@ -44,25 +44,25 @@ function titleCase(str: string) {
 function buildPopupHTML(name: string, flow: number | null, temp: number | null, updated: string | null, siteId: string, state: string) {
   const cond = flow != null ? getCondition(flow) : null;
   return `
-    <div style="font-family:sans-serif;min-width:200px;padding:4px 0">
-      <p style="font-size:13px;font-weight:700;color:#111827;margin:0 0 8px">${titleCase(name)}</p>
-      <div style="display:flex;gap:12px;align-items:flex-end">
+    <div style="font-family:system-ui,sans-serif;min-width:200px;padding:2px 0">
+      <p style="font-size:12px;font-weight:700;color:#e8f5ef;margin:0 0 10px;letter-spacing:-0.01em">${titleCase(name)}</p>
+      <div style="display:flex;gap:14px;align-items:flex-end">
         ${flow != null ? `
           <div>
-            <p style="font-size:20px;font-weight:700;color:#085041;margin:0;line-height:1">${flow.toLocaleString()}<span style="font-size:11px;color:#9CA3AF;font-weight:400"> cfs</span></p>
-            <p style="font-size:11px;color:#9CA3AF;margin:2px 0 0">Flow</p>
+            <p style="font-size:22px;font-weight:800;color:#e8f5ef;margin:0;line-height:1;letter-spacing:-0.03em">${flow.toLocaleString()}<span style="font-size:10px;color:#46705a;font-weight:400;margin-left:3px">cfs</span></p>
+            <p style="font-size:10px;color:#46705a;margin:3px 0 0">Flow</p>
           </div>` : ''}
         ${temp != null ? `
           <div>
-            <p style="font-size:20px;font-weight:700;color:#085041;margin:0;line-height:1">${celsiusToF(temp)}<span style="font-size:11px;color:#9CA3AF;font-weight:400">°F</span></p>
-            <p style="font-size:11px;color:#9CA3AF;margin:2px 0 0">Temp</p>
+            <p style="font-size:22px;font-weight:800;color:#e8f5ef;margin:0;line-height:1;letter-spacing:-0.03em">${celsiusToF(temp)}<span style="font-size:10px;color:#46705a;font-weight:400;margin-left:2px">°F</span></p>
+            <p style="font-size:10px;color:#46705a;margin:3px 0 0">Temp</p>
           </div>` : ''}
         ${cond ? `
-          <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:${cond.color}22;color:${cond.color};margin-bottom:2px">${cond.label}</span>
+          <span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;background:${cond.color}20;color:${cond.color};margin-bottom:2px;letter-spacing:0.03em">${cond.label}</span>
         ` : ''}
       </div>
-      ${updated ? `<p style="font-size:10px;color:#D1D5DB;margin:8px 0 0">Updated ${updated}</p>` : ''}
-      <a href="/river/${state}-${siteId}" style="display:inline-block;margin-top:10px;font-size:11px;color:#085041;text-decoration:none;font-weight:600">View river details →</a>
+      ${updated ? `<p style="font-size:9px;color:#2a4838;margin:8px 0 0">Updated ${updated}</p>` : ''}
+      <a href="/river/${state}-${siteId}" style="display:inline-block;margin-top:10px;font-size:11px;color:#34d399;text-decoration:none;font-weight:600">View river details →</a>
     </div>
   `;
 }
@@ -193,19 +193,19 @@ function buildAccessPopupHTML(props: any): string {
     ? new Date(last_stocked + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
   return `
-    <div style="font-family:sans-serif;min-width:180px;padding:4px 0">
-      <p style="font-size:13px;font-weight:700;color:#111827;margin:0 0 6px">${display}</p>
+    <div style="font-family:system-ui,sans-serif;min-width:180px;padding:2px 0">
+      <p style="font-size:12px;font-weight:700;color:#e8f5ef;margin:0 0 7px;letter-spacing:-0.01em">${display}</p>
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">
-        ${access_type ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:#EFF6FF;color:#2563EB;font-weight:600">${access_type}</span>` : ''}
-        ${county ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:#F3F4F6;color:#6B7280">${county} County</span>` : ''}
+        ${access_type ? `<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:rgba(52,211,153,0.12);color:#34d399;font-weight:700">${access_type}</span>` : ''}
+        ${county ? `<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:rgba(255,255,255,0.06);color:#7aab90">${county} County</span>` : ''}
       </div>
-      ${formattedDate ? `<p style="font-size:12px;color:#085041;font-weight:600;margin:0 0 6px">Last stocked: ${formattedDate}</p>` : ''}
-      ${species && species !== 'null' ? `<p style="font-size:11px;color:#374151;margin:0 0 4px"><strong>Species:</strong> ${species}</p>` : ''}
-      ${parking && parking !== 'null' ? `<p style="font-size:11px;color:#374151;margin:0 0 4px"><strong>Parking:</strong> ${parking}</p>` : ''}
-      ${fee === 'Y' ? `<p style="font-size:11px;color:#DC2626;font-weight:600;margin:0 0 4px">Fee required</p>` : ''}
-      ${ada && ada !== 'null' ? `<p style="font-size:11px;color:#374151;margin:0 0 4px">${ada}</p>` : ''}
-      ${notes && notes !== 'null' ? `<p style="font-size:11px;color:#6B7280;margin:0 0 4px">${notes}</p>` : ''}
-      ${detail_url && detail_url !== 'null' ? `<a href="${detail_url}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#2563EB">More info →</a>` : ''}
+      ${formattedDate ? `<p style="font-size:11px;color:#34d399;font-weight:600;margin:0 0 5px">Last stocked: ${formattedDate}</p>` : ''}
+      ${species && species !== 'null' ? `<p style="font-size:11px;color:#7aab90;margin:0 0 3px">${species}</p>` : ''}
+      ${parking && parking !== 'null' ? `<p style="font-size:11px;color:#46705a;margin:0 0 3px">Parking: ${parking}</p>` : ''}
+      ${fee === 'Y' ? `<p style="font-size:11px;color:#f87171;font-weight:600;margin:0 0 3px">Fee required</p>` : ''}
+      ${ada && ada !== 'null' ? `<p style="font-size:11px;color:#34d399;font-weight:700;margin:0 0 3px">ADA Accessible</p>` : ''}
+      ${notes && notes !== 'null' ? `<p style="font-size:11px;color:#46705a;margin:0 0 3px">${notes}</p>` : ''}
+      ${detail_url && detail_url !== 'null' ? `<a href="${detail_url}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#34d399;text-decoration:none;font-weight:600">More info →</a>` : ''}
     </div>
   `;
 }
@@ -260,7 +260,7 @@ export default function MapClient({ token }: { token: string }) {
 
       mapInstance = new mapboxgl.Map({
         container: containerRef.current,
-        style: 'mapbox://styles/mapbox/outdoors-v12',
+        style: 'mapbox://styles/mapbox/dark-v11',
         center: stateConfig.center,
         zoom: stateConfig.zoom,
         attributionControl: false,
@@ -513,79 +513,37 @@ export default function MapClient({ token }: { token: string }) {
     );
   }
 
+  const SB: React.CSSProperties = { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '0.83rem', padding: '0.45rem 0.75rem', width: '100%', cursor: 'pointer', outline: 'none', boxSizing: 'border-box' };
+
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 56px)', overflow: 'hidden' }}>
 
       {/* Sidebar */}
-      <div style={{
-        width: '300px',
-        flexShrink: 0,
-        background: '#ffffff',
-        borderRight: '1px solid #E5E7EB',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}>
-        <div style={{ padding: '1rem', borderBottom: '1px solid #E5E7EB' }}>
-          <h1 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#085041', marginBottom: '0.5rem' }}>River Map</h1>
+      <div style={{ width: '290px', flexShrink: 0, background: 'var(--bg)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
+          <p style={{ fontSize: '0.65rem', fontWeight: '800', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.6rem' }}>River Map</p>
 
-          <select
-            value={currentState}
-            onChange={e => {
-              setSearch('');
-              setSelectedId(null);
-              setStockingFilter('all');
-              router.push(`/map?state=${e.target.value}`);
-            }}
-            style={{ width: '100%', padding: '0.45rem 0.75rem', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '0.85rem', color: '#111827', background: '#fff', cursor: 'pointer', marginBottom: '0.5rem', boxSizing: 'border-box' }}
-          >
-            {STATES.map(s => (
-              <option key={s.code} value={s.code}>{s.label}</option>
-            ))}
+          <select value={currentState} onChange={e => { setSearch(''); setSelectedId(null); setStockingFilter('all'); router.push(`/map?state=${e.target.value}`); }} style={{ ...SB, marginBottom: '0.6rem' }}>
+            {STATES.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
           </select>
 
-          <p style={{ fontSize: '0.78rem', color: '#9CA3AF', marginBottom: '0.5rem' }}>
-            {gaugesLoading
-              ? `Loading ${stateConfig.label} gauges…`
-              : `${rivers.length} USGS gauges · ${stateConfig.label}`}
+          <p style={{ fontSize: '0.73rem', color: 'var(--text-3)', marginBottom: '0.6rem' }}>
+            {gaugesLoading ? `Loading ${stateConfig.label}…` : `${rivers.length} gauges · ${stateConfig.label}`}
           </p>
 
           {accessPoints.length > 0 && (
             <>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#374151', cursor: 'pointer', marginBottom: '6px' }}>
-                <input
-                  type="checkbox"
-                  checked={showAccess}
-                  onChange={e => setShowAccess(e.target.checked)}
-                  style={{ accentColor: '#2563EB', width: '14px', height: '14px' }}
-                />
-                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#2563EB', display: 'inline-block', flexShrink: 0 }} />
-                {displayedAccessPoints.length}
-                {stockingFilter !== 'all' && (
-                  <span style={{ color: '#9CA3AF' }}>/{accessPoints.length}</span>
-                )}
-                {' '}access points
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-2)', cursor: 'pointer', marginBottom: '6px' }}>
+                <input type="checkbox" checked={showAccess} onChange={e => setShowAccess(e.target.checked)} style={{ accentColor: 'var(--green)', width: '13px', height: '13px' }} />
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--green)', display: 'inline-block', flexShrink: 0 }} />
+                {displayedAccessPoints.length}{stockingFilter !== 'all' && <span style={{ color: 'var(--text-3)' }}>/{accessPoints.length}</span>} access points
               </label>
-
               {showAccess && (
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <p style={{ fontSize: '0.7rem', color: '#9CA3AF', marginBottom: '4px' }}>Filter by last stocked</p>
+                <div style={{ marginBottom: '0.6rem' }}>
+                  <p style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginBottom: '4px' }}>Filter by last stocked</p>
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {STOCKING_FILTERS.map(f => (
-                      <button
-                        key={f.value}
-                        onClick={() => setStockingFilter(f.value)}
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: '20px',
-                          border: `1px solid ${stockingFilter === f.value ? '#2563EB' : '#D1D5DB'}`,
-                          background: stockingFilter === f.value ? '#EFF6FF' : 'transparent',
-                          color: stockingFilter === f.value ? '#2563EB' : '#6B7280',
-                          fontSize: '0.72rem',
-                          fontWeight: stockingFilter === f.value ? '600' : '400',
-                          cursor: 'pointer',
-                        }}
-                      >
+                      <button key={f.value} onClick={() => setStockingFilter(f.value)} style={{ padding: '2px 8px', borderRadius: '20px', border: `1px solid ${stockingFilter === f.value ? 'var(--green)' : 'var(--border)'}`, background: stockingFilter === f.value ? 'var(--green-dim)' : 'transparent', color: stockingFilter === f.value ? 'var(--green)' : 'var(--text-3)', fontSize: '0.7rem', fontWeight: stockingFilter === f.value ? '700' : '400', cursor: 'pointer' }}>
                         {f.label}
                       </button>
                     ))}
@@ -595,28 +553,14 @@ export default function MapClient({ token }: { token: string }) {
             </>
           )}
 
-          <input
-            type="text"
-            placeholder="Search rivers..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.5rem 0.75rem',
-              borderRadius: '8px',
-              border: '1px solid #D1D5DB',
-              fontSize: '0.85rem',
-              color: '#111827',
-              boxSizing: 'border-box',
-            }}
-          />
+          <input type="text" placeholder="Search rivers..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...SB, cursor: 'text' }} />
         </div>
 
         {/* Legend */}
-        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #F3F4F6', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div style={{ padding: '0.6rem 1rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
           {LEGEND.map(l => (
-            <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', color: '#6B7280' }}>
-              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: l.color, display: 'inline-block', flexShrink: 0 }} />
+            <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.67rem', color: 'var(--text-3)' }}>
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: l.color, display: 'inline-block', flexShrink: 0 }} />
               {l.label}
             </span>
           ))}
@@ -628,67 +572,28 @@ export default function MapClient({ token }: { token: string }) {
             const cond = river.flow != null ? getCondition(river.flow) : null;
             const isSelected = river.id === selectedId;
             return (
-              <button
-                key={river.id}
-                onClick={() => flyTo(river)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  borderBottom: '1px solid #F9FAFB',
-                  background: isSelected ? '#F0FDF4' : 'transparent',
-                  border: 'none',
-                  borderLeft: isSelected ? '3px solid #085041' : '3px solid transparent',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
-              >
-                <span style={{ fontSize: '0.82rem', color: '#111827', fontWeight: isSelected ? '600' : '400', flex: 1, lineHeight: '1.3' }}>
+              <button key={river.id} onClick={() => flyTo(river)} style={{ width: '100%', padding: '0.65rem 1rem', borderBottom: '1px solid var(--border-subtle)', background: isSelected ? 'var(--surface-2)' : 'transparent', border: 'none', borderLeft: `2px solid ${isSelected ? 'var(--green)' : 'transparent'}`, textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.8rem', color: isSelected ? 'var(--text)' : 'var(--text-2)', fontWeight: isSelected ? '600' : '400', flex: 1, lineHeight: '1.3' }}>
                   {titleCase(river.name)}
                 </span>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
-                  {river.flow != null && (
-                    <span style={{ fontSize: '0.8rem', fontWeight: '600', color: cond?.color }}>
-                      {river.flow.toLocaleString()} cfs
-                    </span>
-                  )}
-                  {river.temp != null && (
-                    <span style={{ fontSize: '0.72rem', color: '#9CA3AF' }}>
-                      {celsiusToF(river.temp)}°F
-                    </span>
-                  )}
+                  {river.flow != null && <span style={{ fontSize: '0.77rem', fontWeight: '700', color: cond?.color }}>{river.flow.toLocaleString()} cfs</span>}
+                  {river.temp != null && <span style={{ fontSize: '0.68rem', color: 'var(--text-3)' }}>{celsiusToF(river.temp)}°F</span>}
                 </div>
               </button>
             );
           })}
-          {filtered.length > 150 && (
-            <p style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', color: '#9CA3AF', textAlign: 'center' }}>
-              Refine search to see more ({filtered.length - 150} hidden)
-            </p>
-          )}
-          {filtered.length === 0 && !gaugesLoading && (
-            <p style={{ padding: '2rem 1rem', fontSize: '0.85rem', color: '#9CA3AF', textAlign: 'center' }}>
-              {search ? `No rivers match "${search}"` : 'No gauge data available'}
-            </p>
-          )}
+          {filtered.length > 150 && <p style={{ padding: '0.75rem 1rem', fontSize: '0.73rem', color: 'var(--text-3)', textAlign: 'center' }}>Refine search to see more ({filtered.length - 150} hidden)</p>}
+          {filtered.length === 0 && !gaugesLoading && <p style={{ padding: '2rem 1rem', fontSize: '0.82rem', color: 'var(--text-3)', textAlign: 'center' }}>{search ? `No rivers match "${search}"` : 'No gauge data'}</p>}
         </div>
       </div>
 
       {/* Map */}
       <div style={{ flex: 1, position: 'relative' }}>
         <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
-
         {!loaded && (
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: '#f8faf9',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            pointerEvents: 'none',
-          }}>
-            <p style={{ color: '#9CA3AF', fontSize: '0.9rem' }}>Loading map...</p>
+          <div style={{ position: 'absolute', inset: 0, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>Loading map...</p>
           </div>
         )}
       </div>
